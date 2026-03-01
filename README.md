@@ -71,23 +71,20 @@ Temporal windows on hard prompts:
 
 Boundary finding: intervention benefit plateaus at token 24.
 
-### Active Experiment Queue
+### Rank Ablation Results (Completed)
 
-- Rank ablation is currently running for ranks `8/16/32/64`.
-- Output target: `logs/rank_ablation_rank{8,16,32,64}_stratified.csv`.
-
-Interim snapshot (3/4 ranks complete; means over 200 stratified prompts):
+- Evaluated ranks: `8/16/32/64`.
+- Output source: `logs/rank_ablation_rank{8,16,32,64}_stratified.csv`.
+- Means below are computed over labeled easy/hard strata from the 200-prompt stratified sets (`easy=69`, `medium=73`, `hard=58`).
 
 | Rank | Easy Delta NLL | Hard Delta NLL | Selectivity (Hard-Easy) | Gate Discrimination |
 |---:|---:|---:|---:|---:|
 | 8  | -0.5790 | -0.7552 | -0.1762 | +0.6927 |
 | 16 | -0.6368 | -0.7790 | -0.1422 | +0.6939 |
 | 32 | -0.6161 | -0.7794 | -0.1633 | +0.6982 |
-| 64 | pending | pending | pending | pending |
+| 64 | -0.6288 | -0.8187 | -0.1899 | +0.7020 |
 
-Current reading: hard-stratum improvement remains strong across completed ranks, while the final rank-64 run is still in progress.
-
-This section will be finalized once rank-64 evaluation finishes.
+Conclusion: rank 64 showed the strongest hard-stratum gain and the highest gate discrimination in this sweep.
 
 ## Installation
 

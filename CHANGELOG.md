@@ -6,12 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Planned
-- Finalize rank-ablation summary after rank-64 evaluation finishes.
-
-### In Progress
-- Added interim rank-ablation snapshot in README with completed ranks 8/16/32 and rank-64 marked pending.
+### Added
 - Added `RELEASE_TODO.md` to track 14-item public release checklist completion.
+
+### Changed
+- Finalized rank-ablation summary in README after rank-64 evaluation completed.
+
+### Research Snapshot Updates
+- Rank ablation (`8/16/32/64`) final means on labeled easy/hard strata:
+  - Rank 8: easy `-0.5790`, hard `-0.7552`, selectivity `-0.1762`, gate discrimination `+0.6927`.
+  - Rank 16: easy `-0.6368`, hard `-0.7790`, selectivity `-0.1422`, gate discrimination `+0.6939`.
+  - Rank 32: easy `-0.6161`, hard `-0.7794`, selectivity `-0.1633`, gate discrimination `+0.6982`.
+  - Rank 64: easy `-0.6288`, hard `-0.8187`, selectivity `-0.1899`, gate discrimination `+0.7020`.
+- Sweep conclusion: rank 64 showed the strongest hard-stratum gain and highest gate discrimination in this run.
 
 ## [0.1.0] - 2026-02-28
 

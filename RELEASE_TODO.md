@@ -11,7 +11,7 @@ Status legend: [x] done, [~] in progress, [ ] pending.
 ## High Priority (Polish, Credibility)
 - [x] 5. Add `__version__` to `src/spectral_microscope/__init__.py`.
 - [x] 6. Add citation block to README.
-- [~] 7. Update README Active Work with final rank ablation conclusion after rank-64 eval completes.
+- [x] 7. Update README Active Work with final rank ablation conclusion after rank-64 eval completes.
 - [x] 8. Add example telemetry output to README.
 - [x] 9. Add `CONTRIBUTING.md`.
 
@@ -22,8 +22,8 @@ Status legend: [x] done, [~] in progress, [ ] pending.
 - [x] 13. Resolve seaborn dependency mismatch (removed from requirements; notebook extras retained in `pyproject.toml`).
 - [x] 14. Add `CHANGELOG.md`.
 
-## Next action when rank-64 finishes
-1. Pull final `rank_ablation_rank64_stratified.csv`.
-2. Compute mean Easy/Hard Delta NLL + selectivity + gate discrimination across all ranks.
-3. Replace interim table in README with final table + one-sentence conclusion.
-4. Add final result summary in `CHANGELOG.md` under `[Unreleased]`.
+## Rank-64 follow-up
+- [x] Pulled final `rank_ablation_rank64_stratified.csv`.
+- [x] Computed easy/hard Delta NLL, selectivity, and gate discrimination across all ranks.
+- [x] Replaced interim README table with final table and conclusion.
+- [x] Record final result summary in `CHANGELOG.md` under `[Unreleased]`.
