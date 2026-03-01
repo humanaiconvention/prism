@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### In Progress
 - Added interim rank-ablation snapshot in README with completed ranks 8/16/32 and rank-64 marked pending.
+- Added `RELEASE_TODO.md` to track 14-item public release checklist completion.
 
 ## [0.1.0] - 2026-02-28
 

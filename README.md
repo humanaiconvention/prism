@@ -18,6 +18,12 @@ This repo does **not** include the full private training/evaluation pipeline for
 - `reproduce_paper.py` is intentionally not shipped in this release because the prior version was a template with synthetic data.
 - Package metadata now lives in `pyproject.toml` for standard `pip install -e .` workflows.
 
+Supporting maintenance documents:
+
+- `CONTRIBUTING.md` for issue and pull-request guidance.
+- `CHANGELOG.md` for versioned change history.
+- `RELEASE_TODO.md` for the 14-item release checklist status.
+
 ## Research Status Snapshot (Synced to Phase 4.0, 2026-02-28)
 
 ### Phase 3.0 (Local Proof-of-Concept Run)
