@@ -1,70 +1,170 @@
 # Spectral Microscope
 
-**A causal inference toolkit for analyzing internal hidden state trajectories and attention routing dynamics in hybrid and pure transformer architectures.**
+Inline spectral telemetry for autoregressive language-model generation.
 
-Companion code to the papers *"The Post-Hoc Illusion"* and *"Hybrid Attractor Formation via Temporal Cross-Component Resonance"*.
+## Public Repository Scope
 
-## Overview
-The Spectral Microscope is a PyTorch-based forward-hook telemetry system designed for token-by-token autoregressive generation capture. It correctly records *inline* attention routing and spectral geometries (effective dimension, spectral entropy), avoiding the causal mismatch that plagues post-hoc replay analysis.
+This public repository currently ships:
 
-## Features
-- **Inline Spectral Analysis:** Captures streaming covariance and effective intrinsic dimension dynamics without interrupting generated context loops.
-- **Autoregressive Hooks:** Records true self-attention mappings at generation time.
-- **Reproducibility:** Completely separated from proprietary environment strings.
+- `src/spectral_microscope/`: inline telemetry capture library.
+- `quickstart.ipynb`: first-run validation notebook.
+- `requirements.txt`: dependency pins for the public quickstart path.
+
+This repo does **not** include the full private training/evaluation pipeline for differentiable gated LoRA experiments.
+
+## Public Release Housekeeping
+
+- `AGENTS.md` is intentionally included as maintainer guidance for public-safe updates.
+- `reproduce_paper.py` is intentionally not shipped in this release because the prior version was a template with synthetic data.
+- Package metadata now lives in `pyproject.toml` for standard `pip install -e .` workflows.
+
+## Research Status Snapshot (Synced to Phase 4.0, 2026-02-28)
+
+### Phase 3.0 (Local Proof-of-Concept Run)
+
+- Config: 45 training pairs, 20 epochs.
+- Easy prompts: `3.7604 -> 3.6497` (Delta NLL `-0.1107`, `11/12` improved).
+- Hard prompts: `6.1458 -> 5.9062` (Delta NLL `-0.2396`, `12/12` improved).
+- Gate discrimination (hard - easy): `0.3543`.
+
+### Phase 3.0 (Scaled Run)
+
+- Config: 3,591 contrastive pairs, rank 32, 30 epochs.
+- Easy Delta NLL: `-0.610`.
+- Medium (held-out) Delta NLL: `-0.577`.
+- Hard Delta NLL: `-0.764`.
+- Gate means: Easy `0.129`, Hard `0.915`, Discrimination `+0.786`.
+
+### Phase 4.0 (Temporal Paradox Boundary)
+
+- Interpretability probe: `corr(gate_mean, baseline_nll) = +0.782`, `p=1.44e-42`.
+- Gate bimodality:
+  - EASY: 89% low gate (<0.2)
+  - HARD: 100% high gate (>=0.2)
+  - Leakage: 0/70 easy with gate >= 0.5
+  - Misses: 0/57 hard with gate < 0.7
+
+Checkpoint ablation learning curve:
+
+| Epoch | Easy Delta NLL | Hard Delta NLL | Selectivity (Hard-Easy) |
+|---|---:|---:|---:|
+| ep4  | -0.613 | -0.751 | -0.138 |
+| ep10 | -0.612 | -0.764 | -0.152 |
+| ep20 | -0.614 | -0.773 | -0.158 |
+| ep30 | -0.610 | -0.764 | -0.154 |
+
+Temporal windows on hard prompts:
+
+| Gate Window | Mean Delta NLL | % of Full Benefit |
+|---|---:|---:|
+| 0->4 tokens  | -0.645 | 84.5% |
+| 0->8 tokens  | -0.710 | 93.0% |
+| 0->12 tokens | -0.748 | 97.9% |
+| 0->16 tokens | -0.762 | 99.8% |
+| 0->24 tokens | -0.764 | 100.0% |
+
+Boundary finding: intervention benefit plateaus at token 24.
+
+### Active Experiment Queue
+
+- Rank ablation is currently running for ranks `8/16/32/64`.
+- Output target: `logs/rank_ablation_rank{8,16,32,64}_stratified.csv`.
+- This section will be updated with final rank-ablation findings when the run completes.
 
 ## Installation
 
 ```bash
 git clone https://github.com/humanaiconvention/spectral-microscope.git
 cd spectral-microscope
-pip install -r requirements.txt
+pip install -e .
 ```
 
-### Critical Hardware and Framework Caveats
+### Notebook Environment (optional)
 
-> [!WARNING]
-> Please adhere to the following framework and hardware requirements, as ignoring them violates the geometric invariants of the analysis:
-
-1. **Eager Attention is Mandatory:** You *must* pass `attn_implementation="eager"` when loading HuggingFace models. Flash Attention and SDPA fuse the attention components and do not explicitly materialize the raw attention matrices, returning `None` to the hooks.
-2. **Qwen Model Precision Bug:** When evaluating Qwen2.5 series models on CUDA, standard `float16` produces NaN logits from step 0. You must use `--dtype bfloat16` (or `.to(torch.bfloat16)`) for all Qwen testbed models.
-3. **Spectral Rank Operations (Replay Mode):** If running spectral covariance decompositions (e.g. `eigvalsh`) on certain hardware, the calculation must be executed on the CPU due to memory bounds and CUDA precision quirks. The analyzer implementation handles this by enforcing `.float().cpu()` before the covariance step.
+```bash
+pip install -e ".[notebook]"
+# or: pip install -r requirements.txt
+```
 
 ## Usage
 
-### Analyzing Generation Trajectories
-You can run an inline telemetry pass using the wrapper:
+### Notebook Path (Recommended)
+
+Open and run:
+
+- `quickstart.ipynb`
+
+### Python API
 
 ```python
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from src.spectral_microscope import SpectralMicroscope
+from spectral_microscope import SpectralMicroscope, __version__
+
+print(f"spectral_microscope version: {__version__}")
 
 model_name = "HuggingFaceTB/SmolLM2-1.7B-Instruct"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(
-    model_name, 
+    model_name,
     device_map="auto",
-    attn_implementation="eager" # Critical
+    attn_implementation="eager",
 )
 
-microscope = SpectralMicroscope(max_tokens=64)
+microscope = SpectralMicroscope(max_tokens=64, window_size=32, streaming_cov_alpha=0.95)
 result = microscope.generate_and_analyze(
     model=model,
     tokenizer=tokenizer,
-    prompt="Explain the theory of general relativity."
+    prompt="Explain what a black hole is in three simple sentences.",
+    max_new_tokens=50,
+    temperature=0.7,
 )
 
 print(result["response"])
-for step in result["telemetry"]:
-    print(f"Step {step['step']} | Entropy: {step['spectral_entropy']:.2f}")
+print(result["telemetry"][0])
 ```
 
-### Reproducing Paper Figures
-To regenerate the core empirical figures without requiring a GPU, run:
+### Example Telemetry Output
 
-```bash
-python reproduce_paper.py --data_dir data_release --output_dir figures
-```
+Representative rows from `pd.DataFrame(result["telemetry"])`:
+
+| step | token | spectral_entropy | effective_dim | streaming_eff_dim | projection_angle |
+|---:|---|---:|---:|---:|---:|
+| 1 | `The` | 2.08 | 7.42 | 1.00 | 0.74 |
+| 2 | ` event` | 2.21 | 8.03 | 1.88 | 0.71 |
+| 3 | ` horizon` | 2.33 | 8.67 | 2.54 | 0.69 |
+| 4 | ` is` | 2.46 | 9.12 | 3.05 | 0.66 |
+| 5 | ` the` | 2.51 | 9.40 | 3.41 | 0.64 |
+
+Values will vary by model, prompt, decoding settings, and precision.
+
+## Runtime Constraints
+
+1. Use eager attention: `attn_implementation="eager"`.
+2. Qwen on CUDA: prefer `dtype=torch.bfloat16` to avoid early-step NaN logits.
+3. Spectral decomposition: run covariance eigendecomposition on CPU float for stability.
+
+## Telemetry Schema
+
+Per generated token, telemetry includes:
+
+- `spectral_entropy`
+- `effective_dim`
+- `streaming_eff_dim`
+- `projection_angle`
 
 ## Citation
-If you use this tool in your research, please cite the corresponding paper:
-*"The Post-Hoc Illusion: Why Replay-Based Attention Analysis Fails in a Hybrid Convolutional-Attention Language Model."* (2026)
+
+If you use this repository in academic work, cite it as software:
+
+```bibtex
+@software{spectral_microscope_2026,
+  title = {Spectral Microscope: Inline Spectral Telemetry for Autoregressive Language Models},
+  author = {HumanAI Convention Contributors},
+  year = {2026},
+  url = {https://github.com/humanaiconvention/spectral-microscope}
+}
+```
+
+## License
+
+This project is licensed under **Creative Commons Attribution 4.0 International (CC BY 4.0)**.

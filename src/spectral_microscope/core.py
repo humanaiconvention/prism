@@ -18,6 +18,7 @@ class SpectralMicroscope:
         max_tokens: int = 512,
         window_size: int = 64,
         top_k_eigenvalues: int = 5,
+        streaming_cov_alpha: float = 0.95,
     ) -> None:
         """Initialize the Spectral Microscope.
 
@@ -25,10 +26,15 @@ class SpectralMicroscope:
             max_tokens: Maximum tokens to analyze.
             window_size: Sliding window size for spectral metrics.
             top_k_eigenvalues: Number of eigenvalues to track.
+            streaming_cov_alpha: Exponential moving-average alpha for streaming covariance.
         """
+        if not 0.0 < streaming_cov_alpha < 1.0:
+            raise ValueError("streaming_cov_alpha must be in (0, 1)")
+
         self.max_tokens = max_tokens
         self.window_size = window_size
         self.top_k_eigenvalues = top_k_eigenvalues
+        self.streaming_cov_alpha = streaming_cov_alpha
 
     @torch.no_grad()
     def generate_and_analyze(
@@ -139,7 +145,7 @@ class SpectralMicroscope:
             hidden_stack = torch.stack(per_step_hidden, dim=0)
             
             streaming_cov = None
-            alpha_ema = 0.95
+            alpha_ema = self.streaming_cov_alpha
             
             for idx in range(len(per_step_hidden)):
                 h_t = hidden_stack[idx].float().cpu()

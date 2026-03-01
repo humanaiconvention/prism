@@ -4,6 +4,8 @@ This library provides utilities to track spectral entropy, effective dimension,
 and layer-level attention metrics during inline text generation.
 """
 
+__version__ = "0.1.0"
+
 from .analysis import (
     compute_spectral_metrics,
     compute_top_eigenvalues,
@@ -12,6 +14,7 @@ from .analysis import (
 from .core import SpectralMicroscope
 
 __all__ = [
+    "__version__",
     "compute_spectral_metrics",
     "compute_top_eigenvalues",
     "compute_top_head_idx",
