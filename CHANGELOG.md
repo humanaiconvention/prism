@@ -7,7 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Planned
-- Rank ablation summary update after current runs complete.
+- Finalize rank-ablation summary after rank-64 evaluation finishes.
+
+### In Progress
+- Added interim rank-ablation snapshot in README with completed ranks 8/16/32 and rank-64 marked pending.
 
 ## [0.1.0] - 2026-02-28
 

@@ -69,7 +69,19 @@ Boundary finding: intervention benefit plateaus at token 24.
 
 - Rank ablation is currently running for ranks `8/16/32/64`.
 - Output target: `logs/rank_ablation_rank{8,16,32,64}_stratified.csv`.
-- This section will be updated with final rank-ablation findings when the run completes.
+
+Interim snapshot (3/4 ranks complete; means over 200 stratified prompts):
+
+| Rank | Easy Delta NLL | Hard Delta NLL | Selectivity (Hard-Easy) | Gate Discrimination |
+|---:|---:|---:|---:|---:|
+| 8  | -0.5790 | -0.7552 | -0.1762 | +0.6927 |
+| 16 | -0.6368 | -0.7790 | -0.1422 | +0.6939 |
+| 32 | -0.6161 | -0.7794 | -0.1633 | +0.6982 |
+| 64 | pending | pending | pending | pending |
+
+Current reading: hard-stratum improvement remains strong across completed ranks, while the final rank-64 run is still in progress.
+
+This section will be finalized once rank-64 evaluation finishes.
 
 ## Installation
 
