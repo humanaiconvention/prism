@@ -24,7 +24,7 @@ Supporting maintenance documents:
 - `CHANGELOG.md` for versioned change history.
 - `RELEASE_TODO.md` for the 14-item release checklist status.
 
-## Research Status Snapshot (Synced to Phase 4.0, 2026-02-28)
+## Research Status Snapshot (Synced to 2026-03-02)
 
 ### Phase 3.0 (Local Proof-of-Concept Run)
 
@@ -40,6 +40,35 @@ Supporting maintenance documents:
 - Medium (held-out) Delta NLL: `-0.577`.
 - Hard Delta NLL: `-0.764`.
 - Gate means: Easy `0.129`, Hard `0.915`, Discrimination `+0.786`.
+
+### Phase 5.1 (Best Checkpoint To Date)
+
+- Stratified (teacher-forced): **Hard Delta NLL `-0.834`**, Selectivity (Hard-Easy) `-0.164`, Gate Discrimination `+0.767`.
+- Robustness: 100% of hard prompts improved under the teacher-forced metric.
+
+### Phase 6.0 (In Progress)
+
+- Goal: reduce constrained-output "deliberation-mode" failures where the gate triggers extended reasoning on prompts requiring short direct output.
+- Approach: add intra-band adversarial pairs (hard-constrained vs hard-analytical) to force the gate to discriminate beyond NLL magnitude.
+
+### Cross-Model Ablation Note (Teacher-Forced Head Zeroing)
+
+We additionally run unconditional, teacher-forced, all-position head zeroing (NLL ablation). This measures a different quantity than generation-time last-token ablation, and can invert the apparent "interference" vs "load-bearing" roles for some heads.
+
+Key finding: interference circuits are not guaranteed to transfer across models even when attention width (hidden size / head count) is held constant.
+
+### LFM2-8B-A1B Targeted Sweep (H8+H12)
+
+Teacher-forced hard-stratum effects when zeroing heads H8+H12 at each attention layer:
+
+| Spectral Layer | Hard dNLL | Role |
+|---:|---:|---|
+| L0 | -0.0738 | Interference |
+| L1 | +0.0005 | Neutral |
+| L2 | +0.0679 | Load-bearing |
+| L3 | -0.0251 | Mild interference |
+| L4 | +0.1070 | Load-bearing |
+| L5 | -0.0240 | Interference |
 
 ### Phase 4.0 (Temporal Paradox Boundary)
 

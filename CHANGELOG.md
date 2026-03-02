@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Finalized rank-ablation summary in README after rank-64 evaluation completed.
+- Updated README research snapshot to reflect Phase 5.1 best checkpoint, Phase 6.0 in-progress constrained gating work, and LFM2-8B-A1B targeted sweep results.
 
 ### Research Snapshot Updates
 - Rank ablation (`8/16/32/64`) final means on labeled easy/hard strata:
