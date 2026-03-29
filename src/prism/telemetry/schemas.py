@@ -198,6 +198,11 @@ class LayerEntropyProfile:
     viability_score: float      # effective_dimension / hidden_dim  ∈ [0, 1]; higher = healthier
     fisher_curvature: float     # Trace FIM approximation (sum of activation variances)
     spectral_summary: Optional[SpectralMetricSummary] = None
+    # Outlier geometry — TurboQuant-inspired massive-activation diagnostics
+    outlier_ratio: float = 1.0           # max dim magnitude / mean dim magnitude; >10 = dominant dim
+    activation_kurtosis: float = 0.0     # excess kurtosis of per-dim magnitudes; positive = heavy-tailed
+    cardinal_proximity: float = 0.0      # mean max-abs component of unit vectors; near 1.0 = axis-aligned
+    quantization_hostility: float = 0.0  # composite [0, 1]; >0.7 = hostile to low-bit quantization
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
@@ -215,6 +220,10 @@ class LayerEntropyProfile:
             viability_score=float(d["viability_score"]),
             fisher_curvature=float(d["fisher_curvature"]),
             spectral_summary=SpectralMetricSummary.from_dict(spectral_summary) if spectral_summary else None,
+            outlier_ratio=float(d.get("outlier_ratio", 1.0)),
+            activation_kurtosis=float(d.get("activation_kurtosis", 0.0)),
+            cardinal_proximity=float(d.get("cardinal_proximity", 0.0)),
+            quantization_hostility=float(d.get("quantization_hostility", 0.0)),
         )
 
 @dataclass
@@ -243,6 +252,11 @@ class EntropySnapshot:
 
     # Number of eval prompts
     n_samples: int = 0
+    # Outlier geometry aggregates across profiled layers
+    mean_outlier_ratio: float = 1.0              # mean outlier_ratio across layers
+    mean_cardinal_proximity: float = 0.0         # mean cardinal_proximity across layers
+    mean_quantization_hostility: float = 0.0     # mean composite hostility score across layers
+    worst_layer_idx: int = -1                    # layer index with highest quantization_hostility
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)

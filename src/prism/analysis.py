@@ -186,6 +186,62 @@ def compute_top_eigenvalues(hidden_window: torch.Tensor, k: int) -> Union[List[f
     return [float(value) for value in topk.values[0].tolist()]
 
 
+def _outlier_geometry(H_raw: torch.Tensor) -> tuple:
+    """Compute TurboQuant-inspired massive-activation geometry metrics.
+
+    These four metrics quantify how hostile a layer's activation geometry is
+    to low-bit quantization.  Derived from the massive-activation diagnostic
+    pattern identified in quantization-aware analysis of large LMs.
+
+    Args:
+        H_raw: Raw (not mean-centred) float tensor of shape (seq_len, hidden_dim).
+
+    Returns:
+        (outlier_ratio, activation_kurtosis, cardinal_proximity,
+         quantization_hostility) as floats.
+    """
+    import math
+    import torch.nn.functional as F
+
+    H_raw = H_raw.float()
+    seq, dim = H_raw.shape
+    if seq < 2 or dim < 2:
+        return 1.0, 0.0, 0.0, 0.0
+
+    # Per-dimension mean absolute magnitude across tokens
+    dim_mag = H_raw.abs().mean(dim=0)          # (dim,)
+
+    # 1. Outlier ratio: dominance of the largest-magnitude dimension
+    mean_mag = dim_mag.mean()
+    max_mag  = dim_mag.max()
+    outlier_ratio = float((max_mag / (mean_mag + 1e-12)).item())
+
+    # 2. Activation kurtosis: excess kurtosis of per-dim magnitudes.
+    #    Positive = heavy-tailed (outlier dims pull the tail up).
+    mu    = dim_mag.mean()
+    sigma = dim_mag.std(unbiased=False)
+    if sigma < 1e-12:
+        activation_kurtosis = 0.0
+    else:
+        activation_kurtosis = float(
+            (((dim_mag - mu) ** 4).mean() / (sigma ** 4 + 1e-12) - 3.0).item()
+        )
+
+    # 3. Cardinal proximity: how closely aligned are token vectors to basis axes?
+    #    Uses raw H so directions are not distorted by mean-centring.
+    h_unit          = F.normalize(H_raw, dim=-1)            # (seq, dim)
+    cardinal_proximity = float(h_unit.abs().max(dim=-1).values.mean().item())
+
+    # 4. Composite quantization hostility [0, 1].
+    #    Each sub-metric normalised independently before averaging.
+    or_norm = min(math.log(max(outlier_ratio, 1.0)) / math.log(50.0), 1.0)
+    ak_norm = min(max(activation_kurtosis, 0.0) / 20.0, 1.0)
+    cp_norm = float(cardinal_proximity)
+    quantization_hostility = (or_norm + ak_norm + cp_norm) / 3.0
+
+    return outlier_ratio, activation_kurtosis, cardinal_proximity, quantization_hostility
+
+
 def compute_top_head_idx(attentions: Sequence[torch.Tensor]) -> str:
     """Identify the attention head with the highest variance.
 

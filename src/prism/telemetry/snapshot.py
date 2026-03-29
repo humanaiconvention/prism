@@ -3,7 +3,7 @@ import math
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import torch
 
-from prism.analysis import compute_spectral_metrics
+from prism.analysis import compute_spectral_metrics, _outlier_geometry
 from prism.geometry.viability import GeometricViability
 from prism.phase.coherence import PhaseAnalyzer
 from .schemas import (
@@ -91,11 +91,17 @@ def take_snapshot(
                         spectral_entropy, effective_dim = compute_spectral_metrics(h)
                         viability = geo_viability.compute_viability_score(effective_dim, hidden_dim)
                         fisher = geo_viability.fisher_information_curvature(h)
+                        # Outlier geometry on raw (not mean-centred) activations
+                        or_, ak, cp, qh = _outlier_geometry(h)
                         all_layer_metrics[li].append({
                             "spectral_entropy": float(spectral_entropy),
                             "effective_dimension": float(effective_dim),
                             "viability_score": float(viability),
                             "fisher_curvature": float(fisher),
+                            "outlier_ratio": or_,
+                            "activation_kurtosis": ak,
+                            "cardinal_proximity": cp,
+                            "quantization_hostility": qh,
                         })
                         prompt_entropy_values.append(float(spectral_entropy))
                         prompt_effective_values.append(float(effective_dim))
@@ -150,6 +156,10 @@ def take_snapshot(
                 spectral_entropy=_metric_summary([m["spectral_entropy"] for m in metrics_list], confidence_level),
                 effective_dimension=_metric_summary([m["effective_dimension"] for m in metrics_list], confidence_level),
             ),
+            outlier_ratio=_mean([m.get("outlier_ratio", 1.0) for m in metrics_list]),
+            activation_kurtosis=_mean([m.get("activation_kurtosis", 0.0) for m in metrics_list]),
+            cardinal_proximity=_mean([m.get("cardinal_proximity", 0.0) for m in metrics_list]),
+            quantization_hostility=_mean([m.get("quantization_hostility", 0.0) for m in metrics_list]),
         ))
 
     overall_spectral_summary = SpectralMetricSummary(
@@ -161,6 +171,15 @@ def take_snapshot(
     mean_effective_dimension = overall_spectral_summary.effective_dimension.mean if overall_spectral_summary.effective_dimension else 0.0
     mean_viability_score = _mean(prompt_viability_score)
     mean_fisher_curvature = _mean(prompt_fisher_curvature)
+
+    # Aggregate outlier-geometry fields across profiled layers
+    mean_outlier_ratio = _mean([lp.outlier_ratio for lp in layer_profiles]) if layer_profiles else 1.0
+    mean_cardinal_proximity = _mean([lp.cardinal_proximity for lp in layer_profiles]) if layer_profiles else 0.0
+    mean_quantization_hostility = _mean([lp.quantization_hostility for lp in layer_profiles]) if layer_profiles else 0.0
+    worst_layer_idx = (
+        max(layer_profiles, key=lambda lp: lp.quantization_hostility).layer_idx
+        if layer_profiles else -1
+    )
 
     return EntropySnapshot(
         model_name=model_name,
@@ -175,6 +194,10 @@ def take_snapshot(
         mean_phase_coherence=_mean(all_phase_plv) if all_phase_plv else 0.0,
         noise_sensitivity=_mean(all_noise_sensitivity) if all_noise_sensitivity else 0.0,
         n_samples=len(prompts),
+        mean_outlier_ratio=mean_outlier_ratio,
+        mean_cardinal_proximity=mean_cardinal_proximity,
+        mean_quantization_hostility=mean_quantization_hostility,
+        worst_layer_idx=worst_layer_idx,
     )
 
 
