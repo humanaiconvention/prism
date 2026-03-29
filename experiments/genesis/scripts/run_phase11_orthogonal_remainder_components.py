@@ -1,0 +1,1333 @@
+import argparse
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import torch
+
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from scripts.genesis_loader import load_genesis_model
+from scripts.phase10_experiment_utils import ensure_parent_dir, infer_companion_csv, paired_signflip_test, signflip_test
+from scripts.phase10_site_hooks import TensorSiteSubspaceOverwriteHook, parse_site_list
+from scripts.phase9_semantic_utils import parse_int_list
+from scripts.run_phase10_natural_scalar_interchange import opposite_label
+from scripts.run_phase10_tail_conditioned_necessity import (
+    add_sign_aware_fields,
+    capture_site_state,
+    cosine_similarity,
+    expand_pair_items,
+    fit_direction_from_records,
+    load_pair_items,
+    pair_name_from_item_name,
+    parse_float_list,
+    parse_str_list,
+)
+from scripts.run_phase9_semantic_steering import load_anchor_direction
+from scripts.run_phase9_token_position_steering import evaluate_prepared_item, prepare_eval_item
+
+
+ALLOWED_CONTROLS = {"semantic", "random"}
+ALLOWED_COMPONENT_KINDS = {"cumulative_rank", "single_pc"}
+ALLOWED_REFERENCE_SCHEMES = {"leave_one_pair_out", "heldout_pooled_transfer"}
+ALLOWED_VECTOR_FIT_SCOPES = {"full", "leave_one_pair_out"}
+
+REQUIRED_SUMMARY_COLUMNS = [
+    "dataset_name", "target_layer", "site", "reference_dataset", "reference_scheme",
+    "component_kind", "component_label", "requested_subspace_rank", "effective_subspace_rank",
+    "component_pc_index", "slice_name", "tail_quantile", "counterfactual_gap_threshold",
+    "control", "n_items", "toward_donor_shift_mean_signed_label_margin", "mean_signed_label_margin",
+    "reference_explained_variance_ratio_mean",
+]
+REQUIRED_DETAIL_COLUMNS = [
+    "dataset_name", "target_layer", "site", "control", "reference_dataset", "reference_scheme",
+    "reference_fold_id", "component_kind", "component_label", "requested_subspace_rank",
+    "effective_subspace_rank", "component_pc_index", "item_name", "pair_name", "label",
+    "donor_item_name", "baseline_signed_label_margin", "signed_label_margin",
+    "toward_donor_shift_signed_label_margin", "signed_counterfactual_gap", "abs_semantic_coeff_delta",
+    "recipient_projection_fraction", "donor_projection_fraction", "reference_explained_variance_ratio",
+]
+REQUIRED_SLICE_COLUMNS = REQUIRED_DETAIL_COLUMNS + ["slice_name", "tail_quantile", "counterfactual_gap_threshold"]
+REQUIRED_STATS_COLUMNS = [
+    "comparison_type", "dataset_name", "target_layer", "site", "reference_dataset", "reference_scheme",
+    "reference_fold_id", "component_kind", "component_label", "requested_subspace_rank",
+    "effective_subspace_rank", "component_pc_index", "slice_name", "tail_quantile",
+    "counterfactual_gap_threshold", "n_items",
+    "semantic_mean_toward_donor_shift_signed_label_margin", "semantic_vs_zero_pvalue",
+    "random_mean_toward_donor_shift_signed_label_margin", "random_vs_zero_pvalue",
+    "semantic_minus_random_mean_toward_donor_shift_signed_label_margin", "semantic_vs_random_pvalue",
+]
+REQUIRED_GATE_COLUMNS = REQUIRED_STATS_COLUMNS + [
+    "matched_control_positive", "absolute_positive", "random_antidonor",
+    "dual_gate_positive", "is_primary_selection_cell", "promotion_eligible",
+]
+REQUIRED_POOLED_GATE_COLUMNS = REQUIRED_GATE_COLUMNS + ["pooled_reference_fold_count"]
+REQUIRED_VECTOR_COLUMNS = [
+    "reference_dataset", "target_layer", "site", "fit_scope", "heldout_pair_name", "n_pairs_fit",
+    "n_prompt_records_fit", "raw_norm", "perp_norm", "selected_vector_norm", "retained_fraction",
+    "bulk_variance_explained", "k_bulk_effective", "numerical_rank", "sample_rank_cap",
+    "effective_rank", "cosine_to_full",
+]
+REQUIRED_VECTOR_STATS_COLUMNS = [
+    "reference_dataset", "target_layer", "site", "fit_scope", "n_rows", "mean_retained_fraction",
+    "min_retained_fraction", "mean_bulk_variance_explained", "mean_effective_rank",
+    "mean_cosine_to_full", "min_cosine_to_full",
+]
+REQUIRED_REFERENCE_COLUMNS = [
+    "target_layer", "site", "reference_dataset", "reference_scheme", "reference_fold_id",
+    "reference_excluded_pair_name", "reference_n_items", "reference_train_pair_count",
+    "semantic_fit_scope", "semantic_cosine_to_full", "component_kind", "component_label",
+    "requested_subspace_rank", "effective_subspace_rank", "component_pc_index",
+    "reference_explained_variance_ratio", "control",
+]
+
+POOLED_REFERENCE_FOLD_ID = "POOLED_ALL_FOLDS"
+
+
+def parse_optional_int_list(raw):
+    if raw is None or not str(raw).strip():
+        return []
+    return parse_int_list(raw)
+
+
+def require_columns(df, df_name, required_columns):
+    missing = [column for column in required_columns if column not in df.columns]
+    if missing:
+        raise ValueError(f"{df_name} missing required columns: {missing}")
+
+
+def require_finite(df, df_name, columns, row_mask=None):
+    finite_df = df.loc[row_mask, columns] if row_mask is not None else df[columns]
+    bad_counts = {}
+    for column in columns:
+        values = pd.to_numeric(finite_df[column], errors="coerce")
+        bad_count = int((~np.isfinite(values)).sum())
+        if bad_count:
+            bad_counts[column] = bad_count
+    if bad_counts:
+        raise ValueError(f"{df_name} has non-finite values in required columns: {bad_counts}")
+
+
+def coerce_bool_like(series, column_name):
+    normalized = []
+    for value in series.tolist():
+        if pd.isna(value):
+            normalized.append(False)
+        elif isinstance(value, (bool, np.bool_)):
+            normalized.append(bool(value))
+        elif isinstance(value, (int, np.integer, float, np.floating)):
+            if value in (0, 1):
+                normalized.append(bool(value))
+            else:
+                raise ValueError(f"{column_name} contains non-boolean numeric value: {value}")
+        elif isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in {"true", "1", "yes"}:
+                normalized.append(True)
+            elif lowered in {"false", "0", "no", ""}:
+                normalized.append(False)
+            else:
+                raise ValueError(f"{column_name} contains non-boolean string value: {value!r}")
+        else:
+            raise ValueError(f"{column_name} contains unsupported boolean-like value: {value!r}")
+    return pd.Series(normalized, index=series.index, dtype=bool)
+
+
+def phase11_output_paths(output_csv):
+    return {
+        "summary": output_csv,
+        "detail": infer_companion_csv(output_csv, "detail"),
+        "slice_detail": infer_companion_csv(output_csv, "slice_detail"),
+        "stats": infer_companion_csv(output_csv, "stats"),
+        "gate_summary": infer_companion_csv(output_csv, "gate_summary"),
+        "pooled_gate_summary": infer_companion_csv(output_csv, "pooled_gate_summary"),
+        "vector_fits": infer_companion_csv(output_csv, "vector_fits"),
+        "vector_fit_stats": infer_companion_csv(output_csv, "vector_fit_stats"),
+        "reference_fits": infer_companion_csv(output_csv, "reference_fits"),
+    }
+
+
+def orthogonal_residual(state, direction):
+    vec = direction.to(device=state.device, dtype=state.dtype)
+    coeff = torch.dot(state, vec)
+    return state - (coeff * vec)
+
+
+def fit_pca_bank(states, requested_rank):
+    x = np.asarray(states, dtype=np.float64)
+    if x.ndim != 2 or x.shape[0] < 2:
+        raise ValueError("Need at least two states to fit a PCA bank")
+    mean = np.mean(x, axis=0)
+    centered = x - mean[None, :]
+    _, singular_values, vh = np.linalg.svd(centered, full_matrices=False)
+    max_rank = max(1, min(int(requested_rank), int(vh.shape[0]), int(x.shape[0] - 1)))
+    energy = singular_values ** 2
+    total_energy = float(np.sum(energy))
+    per_pc = energy[:max_rank] / max(total_energy, 1e-12)
+    cumulative = np.cumsum(per_pc)
+    return {
+        "mean": mean,
+        "basis": vh[:max_rank].T,
+        "effective_rank": int(max_rank),
+        "per_pc_explained_variance_ratio": per_pc.astype(np.float64),
+        "cumulative_explained_variance_ratio": cumulative.astype(np.float64),
+    }
+
+
+def make_random_orthogonal_subspace(direction, rank, seed):
+    direction = np.asarray(direction, dtype=np.float64)
+    direction = direction / max(np.linalg.norm(direction), 1e-12)
+    dim = int(direction.shape[0])
+    target_rank = max(1, int(rank))
+    rng = np.random.default_rng(int(seed))
+    basis_cols = []
+    attempts = 0
+    while len(basis_cols) < target_rank:
+        attempts += 1
+        if attempts > 64:
+            raise RuntimeError(f"Could not sample a random orthogonal subspace of rank={target_rank}")
+        candidate = rng.normal(size=(dim, target_rank + 8))
+        candidate = candidate - np.outer(direction, direction @ candidate)
+        for col_idx in range(candidate.shape[1]):
+            vec = candidate[:, col_idx]
+            for prev in basis_cols:
+                vec = vec - (prev @ vec) * prev
+            norm = float(np.linalg.norm(vec))
+            if norm < 1e-8:
+                continue
+            basis_cols.append(vec / norm)
+            if len(basis_cols) >= target_rank:
+                break
+    return np.stack(basis_cols[:target_rank], axis=1)
+
+
+def project_state(state, mean, basis):
+    x = np.asarray(state, dtype=np.float64) - np.asarray(mean, dtype=np.float64)
+    total_energy = float(np.dot(x, x))
+    coeff = np.asarray(basis, dtype=np.float64).T @ x
+    proj_energy = float(np.dot(coeff, coeff))
+    return {
+        "projection_fraction": float(proj_energy / max(total_energy, 1e-12)) if total_energy > 1e-12 else 0.0,
+        "projection_norm": float(np.sqrt(max(proj_energy, 0.0))),
+    }
+
+
+def evaluate_with_component_hook(
+    model,
+    prepared_item,
+    anchor_layer,
+    anchor_direction,
+    target_layer,
+    site,
+    mean,
+    basis,
+    donor_tensor,
+    alpha,
+    position_fraction,
+    donor_norm_match,
+):
+    hook = TensorSiteSubspaceOverwriteHook(
+        site=site,
+        mean=mean,
+        basis=basis,
+        donor_tensor=donor_tensor,
+        alpha=float(alpha),
+        position_fraction=float(position_fraction),
+        donor_norm_match=bool(donor_norm_match),
+    )
+    hook.attach(model, int(target_layer))
+    try:
+        return add_sign_aware_fields(prepared_item, evaluate_prepared_item(model, prepared_item, anchor_layer, anchor_direction))
+    finally:
+        hook.remove()
+
+
+def build_slice_rows(detail_df, quantiles, min_slice_items):
+    rows = []
+    meta_cols = [
+        "dataset_name",
+        "target_layer",
+        "site",
+        "item_name",
+        "pair_name",
+        "signed_counterfactual_gap",
+        "abs_semantic_coeff_delta",
+    ]
+    score_df = detail_df[detail_df["control"] == "semantic"][meta_cols].drop_duplicates()
+    grouped = score_df.groupby(["dataset_name", "target_layer", "site"], dropna=False)
+    for (dataset_name, target_layer, site), group in grouped:
+        item_scores = group.set_index("item_name")
+        score_values = item_scores["signed_counterfactual_gap"].to_numpy(dtype=np.float64)
+        thresholds = [("all_items", np.nan)]
+        for quantile in quantiles:
+            thresholds.append((f"top_q{int(round(100 * quantile)):02d}", float(np.quantile(score_values, quantile))))
+        sub = detail_df[
+            (detail_df["dataset_name"] == dataset_name)
+            & (detail_df["target_layer"] == target_layer)
+            & (detail_df["site"] == site)
+        ].copy()
+        for slice_name, threshold in thresholds:
+            if slice_name == "all_items":
+                selected_items = set(item_scores.index)
+                tail_quantile = 0.0
+            else:
+                selected_items = set(item_scores.index[item_scores["signed_counterfactual_gap"] >= threshold])
+                tail_quantile = float(slice_name.replace("top_q", "")) / 100.0
+            if len(selected_items) < int(min_slice_items):
+                continue
+            slice_df = sub[sub["item_name"].isin(selected_items)].copy()
+            slice_df["slice_name"] = slice_name
+            slice_df["tail_quantile"] = float(tail_quantile)
+            slice_df["counterfactual_gap_threshold"] = float(threshold) if np.isfinite(threshold) else np.nan
+            rows.append(slice_df)
+    if not rows:
+        return pd.DataFrame(columns=list(detail_df.columns) + ["slice_name", "tail_quantile", "counterfactual_gap_threshold"])
+    return pd.concat(rows, axis=0, ignore_index=True)
+
+
+def build_summary_rows(slice_df):
+    if slice_df.empty:
+        return pd.DataFrame(columns=REQUIRED_SUMMARY_COLUMNS)
+    return (
+        slice_df.groupby(
+            [
+                "dataset_name",
+                "target_layer",
+                "site",
+                "reference_dataset",
+                "reference_scheme",
+                "component_kind",
+                "component_label",
+                "requested_subspace_rank",
+                "effective_subspace_rank",
+                "component_pc_index",
+                "slice_name",
+                "tail_quantile",
+                "counterfactual_gap_threshold",
+                "control",
+            ],
+            dropna=False,
+        )
+        .agg(
+            n_items=("item_name", "count"),
+            mean_signed_counterfactual_gap=("signed_counterfactual_gap", "mean"),
+            mean_abs_semantic_coeff_delta=("abs_semantic_coeff_delta", "mean"),
+            mean_recipient_projection_fraction=("recipient_projection_fraction", "mean"),
+            mean_recipient_projection_norm=("recipient_projection_norm", "mean"),
+            mean_donor_projection_fraction=("donor_projection_fraction", "mean"),
+            mean_donor_projection_norm=("donor_projection_norm", "mean"),
+            mean_recipient_state_norm=("recipient_state_norm", "mean"),
+            mean_donor_state_norm=("donor_state_norm", "mean"),
+            mean_semantic_recipient_orth_norm=("semantic_recipient_orth_norm", "mean"),
+            mean_semantic_donor_orth_norm=("semantic_donor_orth_norm", "mean"),
+            toward_donor_shift_mean_signed_label_margin=("toward_donor_shift_signed_label_margin", "mean"),
+            toward_donor_shift_mean_label_target_pairwise_prob=("toward_donor_shift_label_target_pairwise_prob", "mean"),
+            toward_donor_shift_mean_label_accuracy=("toward_donor_shift_label_accuracy", "mean"),
+            delta_from_baseline_mean_signed_label_margin=("delta_from_baseline_signed_label_margin", "mean"),
+            delta_from_baseline_mean_label_target_pairwise_prob=("delta_from_baseline_label_target_pairwise_prob", "mean"),
+            delta_from_baseline_label_accuracy=("delta_from_baseline_label_accuracy", "mean"),
+            delta_from_baseline_mean_anchor_cosine=("delta_from_baseline_anchor_cosine", "mean"),
+            mean_signed_label_margin=("signed_label_margin", "mean"),
+            mean_label_target_pairwise_prob=("label_target_pairwise_prob", "mean"),
+            mean_label_accuracy=("label_accuracy", "mean"),
+            reference_n_items_mean=("reference_n_items", "mean"),
+            reference_train_pair_count_mean=("reference_train_pair_count", "mean"),
+            reference_explained_variance_ratio_mean=("reference_explained_variance_ratio", "mean"),
+        )
+        .reset_index()
+    )
+
+
+def build_stats_rows(slice_df, pool_reference_folds=False):
+    rows = []
+    group_columns = [
+        "dataset_name",
+        "target_layer",
+        "site",
+        "reference_dataset",
+        "reference_scheme",
+        "component_kind",
+        "component_label",
+        "requested_subspace_rank",
+        "effective_subspace_rank",
+        "component_pc_index",
+        "slice_name",
+        "tail_quantile",
+        "counterfactual_gap_threshold",
+    ]
+    if not pool_reference_folds:
+        group_columns.insert(5, "reference_fold_id")
+    grouped = slice_df.groupby(group_columns, dropna=False)
+    for group_key, group in grouped:
+        if not isinstance(group_key, tuple):
+            group_key = (group_key,)
+        group_meta = dict(zip(group_columns, group_key))
+        pivot = group.pivot(index="item_name", columns="control", values="toward_donor_shift_signed_label_margin").dropna()
+        if pivot.empty or "semantic" not in pivot.columns or "random" not in pivot.columns:
+            continue
+        semantic = pivot["semantic"].to_numpy(dtype=np.float64)
+        random = pivot["random"].to_numpy(dtype=np.float64)
+        layer = int(group_meta["target_layer"])
+        requested_rank = int(group_meta["requested_subspace_rank"])
+        
+        # Use a stable seed based on the component identity, but varied for fold vs pooled
+        fold_id = group_meta.get("reference_fold_id", POOLED_REFERENCE_FOLD_ID)
+        seed_offset = 0 if fold_id == POOLED_REFERENCE_FOLD_ID else (hash(fold_id) % 1000000)
+        
+        semantic_zero = signflip_test(semantic, seed=1000 + 37 * layer + requested_rank + seed_offset)
+        random_zero = signflip_test(random, seed=2000 + 37 * layer + requested_rank + seed_offset)
+        semantic_vs_random = paired_signflip_test(semantic, random, seed=3000 + 37 * layer + requested_rank + seed_offset)
+        
+        row = {
+            "comparison_type": "semantic_vs_random_toward_donor_shift",
+            "dataset_name": group_meta["dataset_name"],
+            "target_layer": layer,
+            "site": group_meta["site"],
+            "reference_dataset": group_meta["reference_dataset"],
+            "reference_scheme": group_meta["reference_scheme"],
+            "reference_fold_id": fold_id,
+            "component_kind": group_meta["component_kind"],
+            "component_label": group_meta["component_label"],
+            "requested_subspace_rank": requested_rank,
+            "effective_subspace_rank": int(group_meta["effective_subspace_rank"]),
+            "component_pc_index": int(group_meta["component_pc_index"]) if pd.notna(group_meta["component_pc_index"]) else np.nan,
+            "slice_name": group_meta["slice_name"],
+            "tail_quantile": float(group_meta["tail_quantile"]),
+            "counterfactual_gap_threshold": float(group_meta["counterfactual_gap_threshold"])
+            if np.isfinite(group_meta["counterfactual_gap_threshold"])
+            else np.nan,
+            "n_items": int(pivot.shape[0]),
+            "semantic_mean_toward_donor_shift_signed_label_margin": semantic_zero["mean"],
+            "semantic_ci95_low": semantic_zero["ci95_low"],
+            "semantic_ci95_high": semantic_zero["ci95_high"],
+            "semantic_vs_zero_pvalue": semantic_zero["pvalue"],
+            "random_mean_toward_donor_shift_signed_label_margin": random_zero["mean"],
+            "random_ci95_low": random_zero["ci95_low"],
+            "random_ci95_high": random_zero["ci95_high"],
+            "random_vs_zero_pvalue": random_zero["pvalue"],
+            "semantic_minus_random_mean_toward_donor_shift_signed_label_margin": semantic_vs_random["mean"],
+            "semantic_minus_random_ci95_low": semantic_vs_random["ci95_low"],
+            "semantic_minus_random_ci95_high": semantic_vs_random["ci95_high"],
+            "semantic_vs_random_pvalue": semantic_vs_random["pvalue"],
+        }
+        if pool_reference_folds:
+            row["pooled_reference_fold_count"] = int(group["reference_fold_id"].dropna().nunique())
+        rows.append(row)
+    
+    required_columns = REQUIRED_STATS_COLUMNS + (["pooled_reference_fold_count"] if pool_reference_folds else [])
+    if not rows:
+        return pd.DataFrame(columns=required_columns)
+    df = pd.DataFrame(rows)
+    for col in required_columns:
+        if col not in df.columns:
+            df[col] = np.nan
+    return df[required_columns + [c for c in df.columns if c not in required_columns]]
+
+
+def build_gate_summary(stats_df, reference_dataset, primary_layer, primary_site):
+    if stats_df.empty:
+        return pd.DataFrame(
+            columns=list(REQUIRED_GATE_COLUMNS) + [column for column in stats_df.columns if column not in REQUIRED_GATE_COLUMNS]
+        )
+    # The promotion gate should prioritize pooled results for cross-validated references
+    gate_df = stats_df[stats_df["slice_name"] == "all_items"].copy()
+    
+    # Filter to prioritize POOLED_ALL_FOLDS if available for a given group
+    group_cols = [
+        "dataset_name",
+        "target_layer",
+        "site",
+        "reference_dataset",
+        "reference_scheme",
+        "component_kind",
+        "component_label",
+        "requested_subspace_rank",
+        "effective_subspace_rank",
+        "component_pc_index",
+    ]
+    
+    def prioritize_pooled(group):
+        if POOLED_REFERENCE_FOLD_ID in group["reference_fold_id"].values:
+            return group[group["reference_fold_id"] == POOLED_REFERENCE_FOLD_ID]
+        return group
+        
+    gate_df = gate_df.groupby(group_cols, dropna=False).apply(prioritize_pooled).reset_index(drop=True)
+    
+    gate_df["matched_control_positive"] = (
+        (gate_df["semantic_minus_random_mean_toward_donor_shift_signed_label_margin"] > 0.0)
+        & (gate_df["semantic_vs_random_pvalue"] < 0.05)
+    )
+    gate_df["absolute_positive"] = (
+        (gate_df["semantic_mean_toward_donor_shift_signed_label_margin"] > 0.0)
+        & (gate_df["semantic_vs_zero_pvalue"] < 0.05)
+    )
+    gate_df["random_antidonor"] = (
+        (gate_df["random_mean_toward_donor_shift_signed_label_margin"] < 0.0)
+        & (gate_df["random_vs_zero_pvalue"] < 0.05)
+    )
+    gate_df["dual_gate_positive"] = gate_df["matched_control_positive"] & gate_df["absolute_positive"]
+    gate_df["is_primary_selection_cell"] = (
+        (gate_df["dataset_name"] == reference_dataset)
+        & (gate_df["target_layer"] == int(primary_layer))
+        & (gate_df["site"] == primary_site)
+    )
+    gate_df["promotion_eligible"] = gate_df["dual_gate_positive"] & gate_df["is_primary_selection_cell"]
+    return gate_df.sort_values(
+        ["dataset_name", "target_layer", "site", "component_kind", "requested_subspace_rank", "component_pc_index", "component_label"]
+    )
+
+
+def validate_gate_artifact(gate_df, df_name, require_pooled_fold_count=False):
+    required_columns = REQUIRED_POOLED_GATE_COLUMNS if require_pooled_fold_count else REQUIRED_GATE_COLUMNS
+    require_columns(gate_df, df_name, required_columns)
+
+    if gate_df.empty:
+        return
+
+    finite_columns = [
+        "target_layer", "requested_subspace_rank", "effective_subspace_rank", "tail_quantile",
+        "n_items", "semantic_mean_toward_donor_shift_signed_label_margin",
+        "semantic_vs_zero_pvalue", "random_mean_toward_donor_shift_signed_label_margin",
+        "random_vs_zero_pvalue", "semantic_minus_random_mean_toward_donor_shift_signed_label_margin",
+        "semantic_vs_random_pvalue",
+    ]
+    if require_pooled_fold_count:
+        finite_columns.append("pooled_reference_fold_count")
+    require_finite(gate_df, df_name, finite_columns)
+    if set(gate_df["slice_name"].dropna()) != {"all_items"}:
+        raise ValueError(f"{df_name} must contain only all_items rows")
+    matched = coerce_bool_like(gate_df["matched_control_positive"], "matched_control_positive")
+    absolute = coerce_bool_like(gate_df["absolute_positive"], "absolute_positive")
+    dual = coerce_bool_like(gate_df["dual_gate_positive"], "dual_gate_positive")
+    primary = coerce_bool_like(gate_df["is_primary_selection_cell"], "is_primary_selection_cell")
+    promotion = coerce_bool_like(gate_df["promotion_eligible"], "promotion_eligible")
+    if not dual.equals(matched & absolute):
+        raise ValueError(f"{df_name} dual_gate_positive must equal matched_control_positive AND absolute_positive")
+    if not promotion.equals(dual & primary):
+        raise ValueError(f"{df_name} promotion_eligible must equal dual_gate_positive AND is_primary_selection_cell")
+
+
+def validate_phase11_artifacts(summary_df, detail_df, slice_df, stats_df, gate_df, vector_df, vector_stats_df, reference_df):
+    require_columns(summary_df, "summary_df", REQUIRED_SUMMARY_COLUMNS)
+    require_columns(detail_df, "detail_df", REQUIRED_DETAIL_COLUMNS)
+    require_columns(slice_df, "slice_df", REQUIRED_SLICE_COLUMNS)
+    require_columns(stats_df, "stats_df", REQUIRED_STATS_COLUMNS)
+    # gate_df validation is deferred to separate pooled/unpooled calls if needed, 
+    # but we check the basic gate_df here.
+    require_columns(gate_df, "gate_df", REQUIRED_GATE_COLUMNS)
+    require_columns(vector_df, "vector_df", REQUIRED_VECTOR_COLUMNS)
+    require_columns(vector_stats_df, "vector_stats_df", REQUIRED_VECTOR_STATS_COLUMNS)
+    require_columns(reference_df, "reference_df", REQUIRED_REFERENCE_COLUMNS)
+
+    if not detail_df.empty:
+        require_finite(
+            detail_df,
+            "detail_df",
+            [
+                "target_layer", "requested_subspace_rank", "effective_subspace_rank",
+                "baseline_signed_label_margin", "signed_label_margin",
+                "toward_donor_shift_signed_label_margin", "signed_counterfactual_gap",
+                "abs_semantic_coeff_delta", "recipient_projection_fraction",
+                "donor_projection_fraction", "reference_explained_variance_ratio",
+            ],
+        )
+        unexpected_controls = set(detail_df["control"].dropna()) - ALLOWED_CONTROLS
+        if unexpected_controls:
+            raise ValueError(f"detail_df contains unexpected controls: {sorted(unexpected_controls)}")
+
+    if not slice_df.empty:
+        require_finite(
+            slice_df,
+            "slice_df",
+            [
+                "target_layer", "requested_subspace_rank", "effective_subspace_rank",
+                "tail_quantile", "signed_label_margin", "toward_donor_shift_signed_label_margin",
+                "signed_counterfactual_gap", "abs_semantic_coeff_delta",
+            ],
+        )
+        if "all_items" not in set(slice_df["slice_name"].dropna()):
+            raise ValueError("slice_df must contain an all_items slice")
+
+    # Basic gate check
+    validate_gate_artifact(gate_df, "gate_df")
+
+
+def validate_phase11_artifacts_from_csvs(output_csv):
+    paths = phase11_output_paths(output_csv)
+    summary_df = pd.read_csv(paths["summary"])
+    detail_df = pd.read_csv(paths["detail"])
+    slice_df = pd.read_csv(paths["slice_detail"])
+    stats_df = pd.read_csv(paths["stats"])
+    gate_df = pd.read_csv(paths["gate_summary"])
+    vector_df = pd.read_csv(paths["vector_fits"])
+    vector_stats_df = pd.read_csv(paths["vector_fit_stats"])
+    reference_df = pd.read_csv(paths["reference_fits"])
+    validate_phase11_artifacts(summary_df, detail_df, slice_df, stats_df, gate_df, vector_df, vector_stats_df, reference_df)
+    return paths
+
+
+def save_phase11_artifacts(output_csv, summary_df, detail_df, slice_df, stats_df, gate_df, vector_df, vector_stats_df, reference_df):
+    paths = phase11_output_paths(output_csv)
+    for path in paths.values():
+        ensure_parent_dir(path)
+    summary_df.to_csv(paths["summary"], index=False)
+    detail_df.to_csv(paths["detail"], index=False)
+    slice_df.to_csv(paths["slice_detail"], index=False)
+    stats_df.to_csv(paths["stats"], index=False)
+    gate_df.to_csv(paths["gate_summary"], index=False)
+    vector_df.to_csv(paths["vector_fits"], index=False)
+    vector_stats_df.to_csv(paths["vector_fit_stats"], index=False)
+    reference_df.to_csv(paths["reference_fits"], index=False)
+    return paths
+
+
+def write_phase11_smoke_artifacts(output_csv, reference_dataset, primary_layer, primary_site):
+    def make_detail_row(item_spec, control_name, final_margin, final_prob, final_acc, final_anchor_cosine):
+        baseline_margin = float(item_spec["baseline_margin"])
+        baseline_prob = float(item_spec["baseline_prob"])
+        baseline_acc = float(item_spec["baseline_acc"])
+        return {
+            "dataset_name": reference_dataset,
+            "target_layer": int(primary_layer),
+            "site": primary_site,
+            "control": control_name,
+            "reference_dataset": reference_dataset,
+            "reference_scheme": "leave_one_pair_out",
+            "reference_fold_id": item_spec["pair_name"],
+            "reference_excluded_pair_name": item_spec["pair_name"],
+            "semantic_fit_scope": "leave_one_pair_out",
+            "semantic_cosine_to_full": 0.92,
+            "component_kind": "cumulative_rank",
+            "component_label": "rank_01",
+            "requested_subspace_rank": 1,
+            "effective_subspace_rank": 1,
+            "component_pc_index": np.nan,
+            "reference_n_items": 8,
+            "reference_train_pair_count": 4,
+            "reference_explained_variance_ratio": 0.61,
+            "item_name": item_spec["item_name"],
+            "pair_name": item_spec["pair_name"],
+            "label": item_spec["label"],
+            "donor_item_name": item_spec["donor_item_name"],
+            "donor_label": opposite_label(item_spec["label"]),
+            "baseline_signed_label_margin": baseline_margin,
+            "baseline_label_target_pairwise_prob": baseline_prob,
+            "baseline_label_accuracy": baseline_acc,
+            "signed_label_margin": float(final_margin),
+            "label_target_pairwise_prob": float(final_prob),
+            "label_accuracy": float(final_acc),
+            "anchor_cosine": float(final_anchor_cosine),
+            "delta_from_baseline_signed_label_margin": float(final_margin - baseline_margin),
+            "delta_from_baseline_label_target_pairwise_prob": float(final_prob - baseline_prob),
+            "delta_from_baseline_label_accuracy": float(final_acc - baseline_acc),
+            "delta_from_baseline_anchor_cosine": float(final_anchor_cosine - item_spec["baseline_anchor_cosine"]),
+            "toward_donor_shift_signed_label_margin": float(baseline_margin - final_margin),
+            "toward_donor_shift_label_target_pairwise_prob": float(baseline_prob - final_prob),
+            "toward_donor_shift_label_accuracy": float(baseline_acc - final_acc),
+            "semantic_recipient_coeff": float(item_spec["semantic_recipient_coeff"]),
+            "semantic_donor_coeff": float(item_spec["semantic_donor_coeff"]),
+            "semantic_coeff_delta": float(item_spec["semantic_donor_coeff"] - item_spec["semantic_recipient_coeff"]),
+            "abs_semantic_coeff_delta": float(abs(item_spec["semantic_donor_coeff"] - item_spec["semantic_recipient_coeff"])),
+            "signed_counterfactual_gap": float(item_spec["signed_counterfactual_gap"]),
+            "recipient_projection_fraction": float(item_spec["recipient_projection_fraction"]),
+            "recipient_projection_norm": float(item_spec["recipient_projection_norm"]),
+            "donor_projection_fraction": float(item_spec["donor_projection_fraction"]),
+            "donor_projection_norm": float(item_spec["donor_projection_norm"]),
+            "recipient_state_norm": float(item_spec["recipient_state_norm"]),
+            "donor_state_norm": float(item_spec["donor_state_norm"]),
+            "semantic_recipient_orth_norm": float(item_spec["semantic_recipient_orth_norm"]),
+            "semantic_donor_orth_norm": float(item_spec["semantic_donor_orth_norm"]),
+        }
+
+    item_specs = [
+        {
+            "item_name": "smoke_pair_alpha_math",
+            "pair_name": "smoke_pair_alpha",
+            "label": "math",
+            "donor_item_name": "smoke_pair_alpha_creative",
+            "baseline_margin": 0.60,
+            "baseline_prob": 0.82,
+            "baseline_acc": 1.0,
+            "baseline_anchor_cosine": 0.74,
+            "semantic_recipient_coeff": 0.40,
+            "semantic_donor_coeff": -0.30,
+            "signed_counterfactual_gap": 0.90,
+            "recipient_projection_fraction": 0.31,
+            "recipient_projection_norm": 0.58,
+            "donor_projection_fraction": 0.34,
+            "donor_projection_norm": 0.61,
+            "recipient_state_norm": 1.70,
+            "donor_state_norm": 1.74,
+            "semantic_recipient_orth_norm": 1.43,
+            "semantic_donor_orth_norm": 1.49,
+        },
+        {
+            "item_name": "smoke_pair_beta_creative",
+            "pair_name": "smoke_pair_beta",
+            "label": "creative",
+            "donor_item_name": "smoke_pair_beta_math",
+            "baseline_margin": 0.48,
+            "baseline_prob": 0.76,
+            "baseline_acc": 1.0,
+            "baseline_anchor_cosine": 0.69,
+            "semantic_recipient_coeff": -0.25,
+            "semantic_donor_coeff": 0.28,
+            "signed_counterfactual_gap": 0.62,
+            "recipient_projection_fraction": 0.27,
+            "recipient_projection_norm": 0.51,
+            "donor_projection_fraction": 0.29,
+            "donor_projection_norm": 0.54,
+            "recipient_state_norm": 1.58,
+            "donor_state_norm": 1.61,
+            "semantic_recipient_orth_norm": 1.34,
+            "semantic_donor_orth_norm": 1.36,
+        },
+        {
+            "item_name": "smoke_pair_gamma_math",
+            "pair_name": "smoke_pair_gamma",
+            "label": "math",
+            "donor_item_name": "smoke_pair_gamma_creative",
+            "baseline_margin": 0.52,
+            "baseline_prob": 0.79,
+            "baseline_acc": 1.0,
+            "baseline_anchor_cosine": 0.71,
+            "semantic_recipient_coeff": 0.18,
+            "semantic_donor_coeff": -0.09,
+            "signed_counterfactual_gap": 0.24,
+            "recipient_projection_fraction": 0.22,
+            "recipient_projection_norm": 0.44,
+            "donor_projection_fraction": 0.24,
+            "donor_projection_norm": 0.46,
+            "recipient_state_norm": 1.51,
+            "donor_state_norm": 1.55,
+            "semantic_recipient_orth_norm": 1.28,
+            "semantic_donor_orth_norm": 1.31,
+        },
+    ]
+    condition_map = {
+        "smoke_pair_alpha_math": {"semantic": (0.18, 0.56, 0.0, 0.59), "random": (0.57, 0.80, 1.0, 0.72)},
+        "smoke_pair_beta_creative": {"semantic": (0.16, 0.59, 0.0, 0.57), "random": (0.46, 0.75, 1.0, 0.68)},
+        "smoke_pair_gamma_math": {"semantic": (0.34, 0.65, 1.0, 0.60), "random": (0.61, 0.83, 1.0, 0.73)},
+    }
+    detail_rows = []
+    for item_spec in item_specs:
+        for control_name, values in condition_map[item_spec["item_name"]].items():
+            detail_rows.append(make_detail_row(item_spec, control_name, *values))
+    detail_df = pd.DataFrame(detail_rows)
+    slice_df = build_slice_rows(detail_df, quantiles=[0.67], min_slice_items=1)
+    summary_df = build_summary_rows(slice_df)
+    
+    # Smoke stats with a pooled row
+    stats_df = pd.DataFrame(
+        [
+            {
+                "comparison_type": "semantic_vs_random_toward_donor_shift",
+                "dataset_name": reference_dataset,
+                "target_layer": int(primary_layer),
+                "site": primary_site,
+                "reference_dataset": reference_dataset,
+                "reference_scheme": "leave_one_pair_out",
+                "reference_fold_id": POOLED_REFERENCE_FOLD_ID,
+                "component_kind": "cumulative_rank",
+                "component_label": "rank_01",
+                "requested_subspace_rank": 1,
+                "effective_subspace_rank": 1,
+                "component_pc_index": np.nan,
+                "slice_name": "all_items",
+                "tail_quantile": 0.0,
+                "counterfactual_gap_threshold": np.nan,
+                "n_items": 3,
+                "semantic_mean_toward_donor_shift_signed_label_margin": 0.3067,
+                "semantic_ci95_low": 0.1800,
+                "semantic_ci95_high": 0.4100,
+                "semantic_vs_zero_pvalue": 0.0100,
+                "random_mean_toward_donor_shift_signed_label_margin": -0.0133,
+                "random_ci95_low": -0.0900,
+                "random_ci95_high": 0.0400,
+                "random_vs_zero_pvalue": 0.4100,
+                "semantic_minus_random_mean_toward_donor_shift_signed_label_margin": 0.3200,
+                "semantic_minus_random_ci95_low": 0.2100,
+                "semantic_minus_random_ci95_high": 0.4300,
+                "semantic_vs_random_pvalue": 0.0080,
+                "pooled_reference_fold_count": 3,
+            }
+        ]
+    )
+    gate_df = build_gate_summary(stats_df, reference_dataset=reference_dataset, primary_layer=primary_layer, primary_site=primary_site)
+    vector_df = pd.DataFrame(
+        [
+            {
+                "reference_dataset": reference_dataset,
+                "target_layer": int(primary_layer),
+                "site": primary_site,
+                "fit_scope": "full",
+                "heldout_pair_name": "ALL",
+                "n_pairs_fit": 3,
+                "n_prompt_records_fit": 6,
+                "raw_norm": 1.80,
+                "perp_norm": 1.42,
+                "selected_vector_norm": 1.42,
+                "retained_fraction": 0.79,
+                "bulk_variance_explained": 0.37,
+                "k_bulk_effective": 3,
+                "numerical_rank": 3,
+                "sample_rank_cap": 5,
+                "effective_rank": 3.0,
+                "cosine_to_full": 1.0,
+            }
+        ]
+    )
+    vector_stats_df = (
+        vector_df.groupby(["reference_dataset", "target_layer", "site", "fit_scope"], dropna=False)
+        .agg(
+            n_rows=("heldout_pair_name", "count"),
+            mean_retained_fraction=("retained_fraction", "mean"),
+            min_retained_fraction=("retained_fraction", "min"),
+            mean_bulk_variance_explained=("bulk_variance_explained", "mean"),
+            mean_effective_rank=("effective_rank", "mean"),
+            mean_cosine_to_full=("cosine_to_full", "mean"),
+            min_cosine_to_full=("cosine_to_full", "min"),
+        )
+        .reset_index()
+    )
+    reference_df = pd.DataFrame(
+        [
+            {
+                "target_layer": int(primary_layer),
+                "site": primary_site,
+                "reference_dataset": reference_dataset,
+                "reference_scheme": "leave_one_pair_out",
+                "reference_fold_id": "smoke_pair_alpha",
+                "reference_excluded_pair_name": "smoke_pair_alpha",
+                "reference_n_items": 8,
+                "reference_train_pair_count": 4,
+                "semantic_fit_scope": "leave_one_pair_out",
+                "semantic_cosine_to_full": 0.92,
+                "component_kind": "cumulative_rank",
+                "component_label": "rank_01",
+                "requested_subspace_rank": 1,
+                "effective_subspace_rank": 1,
+                "component_pc_index": np.nan,
+                "reference_explained_variance_ratio": 0.61,
+                "control": "semantic",
+            }
+        ]
+    )
+    validate_phase11_artifacts(summary_df, detail_df, slice_df, stats_df, gate_df, vector_df, vector_stats_df, reference_df)
+    return save_phase11_artifacts(output_csv, summary_df, detail_df, slice_df, stats_df, gate_df, vector_df, vector_stats_df, reference_df)
+
+
+def build_component_specs(subspace_ranks, single_pc_indices):
+    specs = []
+    for rank in sorted({int(v) for v in subspace_ranks if int(v) > 0}):
+        specs.append(
+            {
+                "component_kind": "cumulative_rank",
+                "component_label": f"rank_{rank:02d}",
+                "requested_subspace_rank": int(rank),
+                "component_pc_index": np.nan,
+            }
+        )
+    for pc_idx in sorted({int(v) for v in single_pc_indices if int(v) > 0}):
+        specs.append(
+            {
+                "component_kind": "single_pc",
+                "component_label": f"pc_{pc_idx:02d}",
+                "requested_subspace_rank": 1,
+                "component_pc_index": int(pc_idx),
+            }
+        )
+    return specs
+
+
+def instantiate_component_reference(pca_bank, semantic_direction, spec, seed, common):
+    if spec["component_kind"] == "cumulative_rank":
+        effective_rank = min(int(spec["requested_subspace_rank"]), int(pca_bank["effective_rank"]))
+        basis = pca_bank["basis"][:, :effective_rank]
+        explained = float(pca_bank["cumulative_explained_variance_ratio"][effective_rank - 1])
+    else:
+        pc_index = int(spec["component_pc_index"])
+        if pc_index > int(pca_bank["effective_rank"]):
+            return []
+        effective_rank = 1
+        basis = pca_bank["basis"][:, [pc_index - 1]]
+        explained = float(pca_bank["per_pc_explained_variance_ratio"][pc_index - 1])
+    random_basis = make_random_orthogonal_subspace(semantic_direction, effective_rank, seed=seed)
+    common_meta = {
+        **common,
+        "component_kind": spec["component_kind"],
+        "component_label": spec["component_label"],
+        "requested_subspace_rank": int(spec["requested_subspace_rank"]),
+        "effective_subspace_rank": int(effective_rank),
+        "component_pc_index": int(spec["component_pc_index"]) if pd.notna(spec["component_pc_index"]) else np.nan,
+        "reference_explained_variance_ratio": float(explained),
+    }
+    return [
+        {
+            **common_meta,
+            "control": "semantic",
+            "mean": pca_bank["mean"],
+            "basis": basis,
+        },
+        {
+            **common_meta,
+            "control": "random",
+            "mean": pca_bank["mean"],
+            "basis": random_basis,
+        },
+    ]
+
+
+def fit_component_reference_bank(reference_dataset, target_layers, sites, dataset_fits, component_specs, seed):
+    component_rows = []
+    component_refs = {}
+    pair_names = [item["name"] for item in reference_dataset["pair_items"]]
+    max_rank = max(
+        [1]
+        + [int(spec["requested_subspace_rank"]) for spec in component_specs if spec["component_kind"] == "cumulative_rank"]
+        + [int(spec["component_pc_index"]) for spec in component_specs if pd.notna(spec["component_pc_index"])],
+    )
+    for target_layer in target_layers:
+        for site_idx, site in enumerate(sites):
+            records = []
+            for prepared in reference_dataset["prepared_items"]:
+                item_name = prepared["item"]["name"]
+                records.append(
+                    {
+                        "item_name": item_name,
+                        "pair_name": pair_name_from_item_name(item_name),
+                        "label": prepared["item"]["label"],
+                        "state": reference_dataset["state_cache"][(int(target_layer), site)][item_name],
+                    }
+                )
+            full_fit = dataset_fits[(int(target_layer), site)]["full"]
+            full_direction = torch.tensor(full_fit["unit_vector"], dtype=torch.float32)
+            pooled_states = [orthogonal_residual(row["state"], full_direction).detach().cpu().numpy().astype(np.float64) for row in records]
+            pooled_bank = fit_pca_bank(pooled_states, requested_rank=max_rank)
+            pooled_common = {
+                "target_layer": int(target_layer),
+                "site": site,
+                "reference_dataset": reference_dataset["label"],
+                "reference_scheme": "heldout_pooled_transfer",
+                "reference_fold_id": "pooled_all",
+                "reference_excluded_pair_name": "none",
+                "reference_n_items": int(len(pooled_states)),
+                "reference_train_pair_count": int(len({row['pair_name'] for row in records})),
+                "semantic_fit_scope": "reference_full",
+                "semantic_cosine_to_full": 1.0,
+            }
+            for spec_idx, spec in enumerate(component_specs):
+                ref_seed = int(seed + 100000 * int(target_layer) + 1000 * site_idx + 100 * spec_idx)
+                for ref in instantiate_component_reference(pooled_bank, full_fit["unit_vector"], spec, ref_seed, pooled_common):
+                    key = (
+                        ref["reference_scheme"],
+                        ref["reference_fold_id"],
+                        int(target_layer),
+                        site,
+                        ref["control"],
+                        ref["component_label"],
+                    )
+                    component_refs[key] = ref
+                    component_rows.append({k: v for k, v in ref.items() if k not in {"mean", "basis"}})
+            for pair_idx, pair_name in enumerate(pair_names):
+                fit = dataset_fits[(int(target_layer), site)]["crossfit"][pair_name]
+                direction = torch.tensor(fit["unit_vector"], dtype=torch.float32)
+                train_rows = [row for row in records if row["pair_name"] != pair_name]
+                train_states = [orthogonal_residual(row["state"], direction).detach().cpu().numpy().astype(np.float64) for row in train_rows]
+                bank = fit_pca_bank(train_states, requested_rank=max_rank)
+                common = {
+                    "target_layer": int(target_layer),
+                    "site": site,
+                    "reference_dataset": reference_dataset["label"],
+                    "reference_scheme": "leave_one_pair_out",
+                    "reference_fold_id": pair_name,
+                    "reference_excluded_pair_name": pair_name,
+                    "reference_n_items": int(len(train_states)),
+                    "reference_train_pair_count": int(len({row['pair_name'] for row in train_rows})),
+                    "semantic_fit_scope": "leave_one_pair_out",
+                    "semantic_cosine_to_full": cosine_similarity(fit["unit_vector"], full_fit["unit_vector"]),
+                }
+                for spec_idx, spec in enumerate(component_specs):
+                    ref_seed = int(seed + 1000000 * int(target_layer) + 10000 * site_idx + 100 * pair_idx + spec_idx)
+                    for ref in instantiate_component_reference(bank, fit["unit_vector"], spec, ref_seed, common):
+                        key = (
+                            ref["reference_scheme"],
+                            ref["reference_fold_id"],
+                            int(target_layer),
+                            site,
+                            ref["control"],
+                            ref["component_label"],
+                        )
+                        component_refs[key] = ref
+                        component_rows.append({k: v for k, v in ref.items() if k not in {"mean", "basis"}})
+    return component_refs, pd.DataFrame(component_rows)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Phase 11: orthogonal-remainder component decomposition at the within-band corridor")
+    parser.add_argument("--data-dir", type=str, default="logs/phase9/data")
+    parser.add_argument(
+        "--eval-jsons",
+        type=str,
+        default="prompts/phase9_shared_eval_heldout.json,prompts/phase10_ood_semantic_eval.json,prompts/phase10_ood_semantic_eval_family2.json",
+    )
+    parser.add_argument("--dataset-labels", type=str, default="heldout_shared,ood_family1,ood_family2")
+    parser.add_argument("--reference-dataset", type=str, default="heldout_shared")
+    parser.add_argument("--target-layers", type=str, default="11,7")
+    parser.add_argument("--primary-layer", type=int, default=11)
+    parser.add_argument("--sites", type=str, default="attn_output")
+    parser.add_argument("--primary-site", type=str, default="attn_output")
+    parser.add_argument("--alpha", type=float, default=1.0)
+    parser.add_argument("--vector-key", type=str, default="delta_perp")
+    parser.add_argument("--anchor-layer", type=int, default=29)
+    parser.add_argument("--position-fraction", type=float, default=1.0)
+    parser.add_argument("--k-bulk", type=int, default=70)
+    parser.add_argument("--min-retained-fraction", type=float, default=0.10)
+    parser.add_argument("--rank-tol", type=float, default=1e-8)
+    parser.add_argument("--subspace-ranks", type=str, default="1,2,4,8")
+    parser.add_argument("--single-pc-indices", type=str, default="")
+    parser.add_argument("--tail-quantiles", type=str, default="0.67,0.80")
+    parser.add_argument("--min-slice-items", type=int, default=6)
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--max-eval-items", type=int, default=None)
+    parser.add_argument("--donor-norm-match", action="store_true")
+    parser.add_argument("--allow-invalid-metadata", action="store_true")
+    parser.add_argument("--output-csv", type=str, default="logs/phase11/orthogonal_remainder_component_summary.csv")
+    parser.add_argument("--validate-existing", action="store_true", help="Validate existing Phase 11 CSV artifacts and exit")
+    parser.add_argument("--write-smoke-artifacts", action="store_true", help="Write tiny synthetic Phase 11 CSV artifacts and exit (no model run)")
+    args = parser.parse_args()
+
+    if args.validate_existing and args.write_smoke_artifacts:
+        raise ValueError("Use at most one of --validate-existing or --write-smoke-artifacts")
+
+    if args.validate_existing:
+        paths = validate_phase11_artifacts_from_csvs(args.output_csv)
+        print(f"Phase 11 artifact validation passed for {paths['summary']}")
+        return
+
+    if args.write_smoke_artifacts:
+        paths = write_phase11_smoke_artifacts(
+            output_csv=args.output_csv,
+            reference_dataset=args.reference_dataset,
+            primary_layer=args.primary_layer,
+            primary_site=args.primary_site,
+        )
+        print(f"Saved synthetic smoke artifacts to {paths['summary']}")
+        return
+
+    eval_jsons = parse_str_list(args.eval_jsons)
+    dataset_labels = parse_str_list(args.dataset_labels)
+    if len(eval_jsons) != len(dataset_labels):
+        raise ValueError("--eval-jsons and --dataset-labels must have the same number of entries.")
+    if args.reference_dataset not in dataset_labels:
+        raise ValueError(f"--reference-dataset {args.reference_dataset!r} must appear in --dataset-labels")
+    target_layers = parse_int_list(args.target_layers)
+    sites = parse_site_list(args.sites)
+    if args.primary_site not in sites:
+        raise ValueError(f"--primary-site {args.primary_site!r} must appear in --sites")
+    tail_quantiles = parse_float_list(args.tail_quantiles)
+    subspace_ranks = parse_int_list(args.subspace_ranks)
+    single_pc_indices = parse_optional_int_list(args.single_pc_indices)
+    component_specs = build_component_specs(subspace_ranks, single_pc_indices)
+    if not component_specs:
+        raise ValueError("Need at least one component specification from --subspace-ranks or --single-pc-indices")
+
+    print("Loading Genesis model for Phase 11 orthogonal-remainder component decomposition...")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, tokenizer, _ = load_genesis_model(device=device)
+    anchor_direction = load_anchor_direction(args.data_dir, args.anchor_layer, allow_invalid_metadata=args.allow_invalid_metadata)
+
+    datasets = []
+    for dataset_label, eval_json in zip(dataset_labels, eval_jsons):
+        pair_items = load_pair_items(eval_json, max_eval_items=args.max_eval_items)
+        eval_items = expand_pair_items(pair_items)
+        prepared_items = [prepare_eval_item(tokenizer, item, device) for item in eval_items]
+        baseline_metrics = {}
+        print(f"Preparing dataset={dataset_label} with {len(pair_items)} pairs / {len(prepared_items)} eval items")
+        for prepared in prepared_items:
+            baseline_metrics[prepared["item"]["name"]] = add_sign_aware_fields(
+                prepared,
+                evaluate_prepared_item(model, prepared, args.anchor_layer, anchor_direction),
+            )
+        state_cache = {}
+        for target_layer in target_layers:
+            for site in sites:
+                state_cache[(int(target_layer), site)] = {}
+                for prepared in prepared_items:
+                    item_name = prepared["item"]["name"]
+                    state_cache[(int(target_layer), site)][item_name] = capture_site_state(
+                        model,
+                        prepared["prompt_ids"],
+                        target_layer,
+                        site,
+                        args.position_fraction,
+                    )
+        datasets.append(
+            {
+                "label": dataset_label,
+                "pair_items": pair_items,
+                "prepared_items": prepared_items,
+                "baseline_metrics": baseline_metrics,
+                "state_cache": state_cache,
+            }
+        )
+
+    reference_dataset = next(dataset for dataset in datasets if dataset["label"] == args.reference_dataset)
+
+    print("Fitting reference semantic directions on the held-out reference dataset...")
+    dataset_fits = {}
+    vector_rows = []
+    for target_layer in target_layers:
+        for site in sites:
+            records = []
+            for prepared in reference_dataset["prepared_items"]:
+                item_name = prepared["item"]["name"]
+                records.append(
+                    {
+                        "pair_name": pair_name_from_item_name(item_name),
+                        "label": prepared["item"]["label"],
+                        "state": reference_dataset["state_cache"][(int(target_layer), site)][item_name].detach().cpu().numpy().astype(np.float64),
+                    }
+                )
+            full_fit = fit_direction_from_records(
+                records,
+                vector_key=args.vector_key,
+                k_bulk=args.k_bulk,
+                min_retained_fraction=args.min_retained_fraction,
+                rank_tol=args.rank_tol,
+            )
+            dataset_fits[(int(target_layer), site)] = {"full": full_fit, "crossfit": {}}
+            vector_rows.append(
+                {
+                    "reference_dataset": args.reference_dataset,
+                    "target_layer": int(target_layer),
+                    "site": site,
+                    "fit_scope": "full",
+                    "heldout_pair_name": "ALL",
+                    "n_pairs_fit": full_fit["n_pairs_fit"],
+                    "n_prompt_records_fit": full_fit["n_prompt_records_fit"],
+                    "raw_norm": float(full_fit["raw_norm"]),
+                    "perp_norm": float(full_fit["perp_norm"]),
+                    "selected_vector_norm": float(full_fit["selected_vector_norm"]),
+                    "retained_fraction": float(full_fit["retained_fraction"]),
+                    "bulk_variance_explained": float(full_fit["bulk_variance_explained"]),
+                    "k_bulk_effective": int(full_fit["k_bulk_effective"]),
+                    "numerical_rank": int(full_fit["numerical_rank"]),
+                    "sample_rank_cap": int(full_fit["sample_rank_cap"]),
+                    "effective_rank": float(full_fit["effective_rank"]),
+                    "cosine_to_full": 1.0,
+                }
+            )
+            pair_names = [item["name"] for item in reference_dataset["pair_items"]]
+            for pair_name in pair_names:
+                remaining = [row for row in records if row["pair_name"] != pair_name]
+                crossfit = fit_direction_from_records(
+                    remaining,
+                    vector_key=args.vector_key,
+                    k_bulk=args.k_bulk,
+                    min_retained_fraction=args.min_retained_fraction,
+                    rank_tol=args.rank_tol,
+                )
+                dataset_fits[(int(target_layer), site)]["crossfit"][pair_name] = crossfit
+                vector_rows.append(
+                    {
+                        "reference_dataset": args.reference_dataset,
+                        "target_layer": int(target_layer),
+                        "site": site,
+                        "fit_scope": "leave_one_pair_out",
+                        "heldout_pair_name": pair_name,
+                        "n_pairs_fit": crossfit["n_pairs_fit"],
+                        "n_prompt_records_fit": crossfit["n_prompt_records_fit"],
+                        "raw_norm": float(crossfit["raw_norm"]),
+                        "perp_norm": float(crossfit["perp_norm"]),
+                        "selected_vector_norm": float(crossfit["selected_vector_norm"]),
+                        "retained_fraction": float(crossfit["retained_fraction"]),
+                        "bulk_variance_explained": float(crossfit["bulk_variance_explained"]),
+                        "k_bulk_effective": int(crossfit["k_bulk_effective"]),
+                        "numerical_rank": int(crossfit["numerical_rank"]),
+                        "sample_rank_cap": int(crossfit["sample_rank_cap"]),
+                        "effective_rank": float(crossfit["effective_rank"]),
+                        "cosine_to_full": cosine_similarity(crossfit["unit_vector"], full_fit["unit_vector"]),
+                    }
+                )
+
+    print("Fitting orthogonal-remainder component reference banks...")
+    component_refs, component_ref_df = fit_component_reference_bank(
+        reference_dataset=reference_dataset,
+        target_layers=target_layers,
+        sites=sites,
+        dataset_fits=dataset_fits,
+        component_specs=component_specs,
+        seed=args.seed,
+    )
+
+    print("Running Phase 11 componentized orthogonal-remainder evaluation...")
+    detail_rows = []
+    for dataset in datasets:
+        dataset_label = dataset["label"]
+        for prepared in dataset["prepared_items"]:
+            item_name = prepared["item"]["name"]
+            pair_name = pair_name_from_item_name(item_name)
+            donor_item_name = f"{pair_name}__{opposite_label(prepared['item']['label'])}"
+            baseline = dataset["baseline_metrics"][item_name]
+            label_sign = float(prepared["label_sign"])
+            for target_layer in target_layers:
+                for site in sites:
+                    if dataset_label == args.reference_dataset:
+                        semantic_fit = dataset_fits[(int(target_layer), site)]["crossfit"][pair_name]
+                        reference_scheme = "leave_one_pair_out"
+                        reference_fold_id = pair_name
+                    else:
+                        semantic_fit = dataset_fits[(int(target_layer), site)]["full"]
+                        reference_scheme = "heldout_pooled_transfer"
+                        reference_fold_id = "pooled_all"
+                    semantic_vec = torch.tensor(semantic_fit["unit_vector"], device=device, dtype=torch.float32)
+                    recipient_state = dataset["state_cache"][(int(target_layer), site)][item_name]
+                    donor_state = dataset["state_cache"][(int(target_layer), site)][donor_item_name]
+                    semantic_recipient_coeff = float(torch.dot(recipient_state, semantic_vec).item())
+                    semantic_donor_coeff = float(torch.dot(donor_state, semantic_vec).item())
+                    signed_counterfactual_gap = float(label_sign * (semantic_recipient_coeff - semantic_donor_coeff))
+                    semantic_recipient_orth = orthogonal_residual(recipient_state, semantic_vec)
+                    semantic_donor_orth = orthogonal_residual(donor_state, semantic_vec)
+                    for spec in component_specs:
+                        for control_name in ("semantic", "random"):
+                            ref = component_refs[
+                                (
+                                    reference_scheme,
+                                    reference_fold_id,
+                                    int(target_layer),
+                                    site,
+                                    control_name,
+                                    spec["component_label"],
+                                )
+                            ]
+                            mean_tensor = torch.tensor(ref["mean"], device=device, dtype=torch.float32)
+                            basis_tensor = torch.tensor(ref["basis"], device=device, dtype=torch.float32)
+                            donor_tensor = donor_state.to(device=device, dtype=torch.float32)
+                            recipient_proj = project_state(
+                                recipient_state.detach().cpu().numpy(),
+                                ref["mean"],
+                                ref["basis"],
+                            )
+                            donor_proj = project_state(
+                                donor_state.detach().cpu().numpy(),
+                                ref["mean"],
+                                ref["basis"],
+                            )
+                            metrics = evaluate_with_component_hook(
+                                model,
+                                prepared,
+                                args.anchor_layer,
+                                anchor_direction,
+                                target_layer,
+                                site,
+                                mean_tensor,
+                                basis_tensor,
+                                donor_tensor,
+                                args.alpha,
+                                args.position_fraction,
+                                args.donor_norm_match,
+                            )
+                            detail_rows.append(
+                                {
+                                    "dataset_name": dataset_label,
+                                    "target_layer": int(target_layer),
+                                    "site": site,
+                                    "control": control_name,
+                                    "reference_dataset": ref["reference_dataset"],
+                                    "reference_scheme": ref["reference_scheme"],
+                                    "reference_fold_id": ref["reference_fold_id"],
+                                    "reference_excluded_pair_name": ref["reference_excluded_pair_name"],
+                                    "semantic_fit_scope": ref["semantic_fit_scope"],
+                                    "semantic_cosine_to_full": float(ref["semantic_cosine_to_full"]),
+                                    "component_kind": ref["component_kind"],
+                                    "component_label": ref["component_label"],
+                                    "requested_subspace_rank": int(ref["requested_subspace_rank"]),
+                                    "effective_subspace_rank": int(ref["effective_subspace_rank"]),
+                                    "component_pc_index": int(ref["component_pc_index"]) if pd.notna(ref["component_pc_index"]) else np.nan,
+                                    "reference_n_items": int(ref["reference_n_items"]),
+                                    "reference_train_pair_count": int(ref["reference_train_pair_count"]),
+                                    "reference_explained_variance_ratio": float(ref["reference_explained_variance_ratio"]),
+                                    "item_name": item_name,
+                                    "pair_name": pair_name,
+                                    "label": prepared["item"]["label"],
+                                    "donor_item_name": donor_item_name,
+                                    "donor_label": opposite_label(prepared["item"]["label"]),
+                                    "baseline_signed_label_margin": float(baseline["signed_label_margin"]),
+                                    "baseline_label_target_pairwise_prob": float(baseline["label_target_pairwise_prob"]),
+                                    "baseline_label_accuracy": float(baseline["label_accuracy"]),
+                                    "signed_label_margin": float(metrics["signed_label_margin"]),
+                                    "label_target_pairwise_prob": float(metrics["label_target_pairwise_prob"]),
+                                    "label_accuracy": float(metrics["label_accuracy"]),
+                                    "anchor_cosine": float(metrics["anchor_cosine"]),
+                                    "delta_from_baseline_signed_label_margin": float(metrics["signed_label_margin"] - baseline["signed_label_margin"]),
+                                    "delta_from_baseline_label_target_pairwise_prob": float(metrics["label_target_pairwise_prob"] - baseline["label_target_pairwise_prob"]),
+                                    "delta_from_baseline_label_accuracy": float(metrics["label_accuracy"] - baseline["label_accuracy"]),
+                                    "delta_from_baseline_anchor_cosine": float(metrics["anchor_cosine"] - baseline["anchor_cosine"]),
+                                    "toward_donor_shift_signed_label_margin": float(baseline["signed_label_margin"] - metrics["signed_label_margin"]),
+                                    "toward_donor_shift_label_target_pairwise_prob": float(baseline["label_target_pairwise_prob"] - metrics["label_target_pairwise_prob"]),
+                                    "toward_donor_shift_label_accuracy": float(baseline["label_accuracy"] - metrics["label_accuracy"]),
+                                    "semantic_recipient_coeff": float(semantic_recipient_coeff),
+                                    "semantic_donor_coeff": float(semantic_donor_coeff),
+                                    "semantic_coeff_delta": float(semantic_donor_coeff - semantic_recipient_coeff),
+                                    "abs_semantic_coeff_delta": float(abs(semantic_donor_coeff - semantic_recipient_coeff)),
+                                    "signed_counterfactual_gap": float(signed_counterfactual_gap),
+                                    "recipient_projection_fraction": float(recipient_proj["projection_fraction"]),
+                                    "recipient_projection_norm": float(recipient_proj["projection_norm"]),
+                                    "donor_projection_fraction": float(donor_proj["projection_fraction"]),
+                                    "donor_projection_norm": float(donor_proj["projection_norm"]),
+                                    "recipient_state_norm": float(torch.norm(recipient_state).item()),
+                                    "donor_state_norm": float(torch.norm(donor_state).item()),
+                                    "semantic_recipient_orth_norm": float(torch.norm(semantic_recipient_orth).item()),
+                                    "semantic_donor_orth_norm": float(torch.norm(semantic_donor_orth).item()),
+                                }
+                            )
+
+    detail_df = pd.DataFrame(detail_rows)
+    slice_df = build_slice_rows(detail_df, quantiles=tail_quantiles, min_slice_items=args.min_slice_items)
+    summary_df = build_summary_rows(slice_df)
+    
+    # Compute both unpooled and pooled stats
+    stats_df_unpooled = build_stats_rows(slice_df, pool_reference_folds=False)
+    stats_df_pooled = build_stats_rows(slice_df, pool_reference_folds=True)
+    stats_df = pd.concat([stats_df_unpooled, stats_df_pooled], axis=0, ignore_index=True)
+    
+    gate_df = build_gate_summary(
+        stats_df,
+        reference_dataset=args.reference_dataset,
+        primary_layer=args.primary_layer,
+        primary_site=args.primary_site,
+    )
+    vector_df = pd.DataFrame(vector_rows)
+    vector_stats_df = (
+        vector_df.groupby(["reference_dataset", "target_layer", "site", "fit_scope"], dropna=False)
+        .agg(
+            n_rows=("heldout_pair_name", "count"),
+            mean_retained_fraction=("retained_fraction", "mean"),
+            min_retained_fraction=("retained_fraction", "min"),
+            mean_bulk_variance_explained=("bulk_variance_explained", "mean"),
+            mean_effective_rank=("effective_rank", "mean"),
+            mean_cosine_to_full=("cosine_to_full", "mean"),
+            min_cosine_to_full=("cosine_to_full", "min"),
+        )
+        .reset_index()
+    )
+    paths = save_phase11_artifacts(
+        args.output_csv,
+        summary_df,
+        detail_df,
+        slice_df,
+        stats_df,
+        gate_df,
+        vector_df,
+        vector_stats_df,
+        component_ref_df,
+    )
+
+    print(f"Saved artifacts to {paths['summary']}")
+
+
+if __name__ == "__main__":
+    main()
