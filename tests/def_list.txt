@@ -1,0 +1,8 @@
+
+D:\Genesis\tests\test_phase19a_baseline_state_amplification.py:13:def make_rows(alpha_value):
+D:\Genesis\tests\test_phase19b_semantic_random_residuals.py:13:def make_rows(alpha_value):
+D:\Genesis\tests\test_phase20a_cross_phase_residual_geometry.py:14:def sigmoid(x):
+D:\Genesis\tests\test_phase20a_cross_phase_residual_geometry.py:18:def make_phase9_rows():
+D:\Genesis\tests\test_phase20a_cross_phase_residual_geometry.py:86:def make_phase18_rows(alpha_value):
+D:\Genesis\tests\test_phase20b_baseline_geometry_sufficiency.py:13:def make_item_table():
+

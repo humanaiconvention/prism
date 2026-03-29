@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from spectral_microscope.analysis import compute_spectral_metrics
+from prism.analysis import compute_spectral_metrics
 
 
 class TestAnalysis(unittest.TestCase):
@@ -28,3 +28,4 @@ class TestAnalysis(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
