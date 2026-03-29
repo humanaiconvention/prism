@@ -30,6 +30,10 @@ Homepage = "https://github.com/humanaiconvention/spectral-microscope"
 Repository = "https://github.com/humanaiconvention/spectral-microscope"
 Issues = "https://github.com/humanaiconvention/spectral-microscope/issues"
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["experiments", "logs", ".pytest_cache"]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 

@@ -33,3 +33,12 @@ htmlcov/
 # OS artifacts
 .DS_Store
 Thumbs.db
+
+# Project-specific exclusions
+logs/
+weights/
+*.safetensors
+*.pt
+*.npz
+*.csv
+!D:\prism\experiments\genesis\prompts\*.csv
