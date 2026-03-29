@@ -27,3 +27,4 @@ Status legend: [x] done, [~] in progress, [ ] pending.
 - [x] Computed easy/hard Delta NLL, selectivity, and gate discrimination across all ranks.
 - [x] Replaced interim README table with final table and conclusion.
 - [x] Record final result summary in `CHANGELOG.md` under `[Unreleased]`.
+

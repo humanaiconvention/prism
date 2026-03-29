@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added `RELEASE_TODO.md` to track 14-item public release checklist completion.
 
 ### Changed
+- **Research Snapshot Update (Phase 10 & 11)**: Synchronized README with the final Phase 10 research findings, including the early-mid corridor (L7-L11), OOD family sensitivity, and the natural interchange (scalar vs orthogonal remainder) diagnostics. Added Phase 11 decomposition status.
 - Finalized rank-ablation summary in README after rank-64 evaluation completed.
 - Updated README research snapshot to reflect Phase 5.1 best checkpoint, Phase 6.0 in-progress constrained gating work, and LFM2-8B-A1B targeted sweep results.
 
@@ -39,3 +40,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `SpectralMicroscope` now exposes `streaming_cov_alpha` for EMA tuning.
 - Quickstart notebook now installs/uses the package API (`pip install -e .`).
 - Core package dependencies were minimized; notebook stack moved to optional `notebook` extras.
+

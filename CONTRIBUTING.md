@@ -7,8 +7,8 @@ Thanks for your interest in Spectral Microscope.
 - Public quickstart notebook and documentation.
 
 ## What this repository does not include
-- Private training orchestration for gated LoRA experiments.
-- Private infrastructure or internal deployment scripts.
+- Advanced training orchestration for gated LoRA experiments.
+- Advanced infrastructure or deployment deployment scripts.
 
 ## How to contribute
 1. Open a GitHub issue describing the bug or request.
@@ -16,10 +16,11 @@ Thanks for your interest in Spectral Microscope.
 3. For code changes, keep pull requests focused and minimal.
 
 ## Pull request expectations
-- Keep edits public-safe (no private hostnames, absolute internal paths, or secrets).
+- Keep edits public-safe (no Advanced hostnames, absolute deployment paths, or secrets).
 - Add/update docs when behavior changes.
 - Add or update tests for functional changes when practical.
 
 ## Paper and research context
 This library is a companion implementation for public-facing telemetry methods.
-If your issue is about private training pipelines, please open an issue for discussion first.
+If your issue is about Advanced training pipelines, please open an issue for discussion first.
+
