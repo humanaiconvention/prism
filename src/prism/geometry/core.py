@@ -204,6 +204,72 @@ def compute_mean_cosine_to_ref(states: List[torch.Tensor], ref_idx: int) -> floa
         cos_vals.append(float(torch.dot(vec, ref).item() / denom.item()))
     return float(np.mean(cos_vals))
 
+def outlier_geometry(H_raw: torch.Tensor) -> Dict[str, float]:
+    """Compute massive-activation outlier geometry metrics for a hidden-state matrix.
+
+    Inspired by TurboQuant (Google, ICLR 2026) — the same per-dimension magnitude
+    statistics that predict KV cache quantization error also serve as an early-warning
+    signal for representation collapse and activation instability during fine-tuning.
+
+    Args:
+        H_raw: Float tensor of shape (seq_len, hidden_dim). Raw (not mean-centred)
+               hidden states from a single layer and prompt.
+
+    Returns:
+        Dict with keys:
+            outlier_ratio           — max dim magnitude / mean dim magnitude.
+                                      >10 indicates a dominant "massive activation".
+            activation_kurtosis     — excess kurtosis of per-dim magnitudes.
+                                      Positive = heavy-tailed distribution.
+            cardinal_proximity      — mean max-abs component of each token unit vector.
+                                      Near 1.0 = vectors axis-aligned → quant-snaps.
+            quantization_hostility  — composite score in [0, 1].
+                                      >0.7 signals the layer is hostile to low-bit quant.
+    """
+    import math
+    import torch.nn.functional as F
+
+    H = H_raw.float()
+    seq, dim = H.shape
+
+    if seq < 1 or dim < 1:
+        return {
+            "outlier_ratio": 1.0,
+            "activation_kurtosis": 0.0,
+            "cardinal_proximity": 0.0,
+            "quantization_hostility": 0.0,
+        }
+
+    dim_mag = H.abs().mean(dim=0)  # (dim,)
+    mean_mag = dim_mag.mean()
+    max_mag = dim_mag.max()
+    outlier_ratio = float((max_mag / (mean_mag + 1e-12)).item())
+
+    mu = dim_mag.mean()
+    sigma = dim_mag.std(unbiased=False)
+    if sigma < 1e-12:
+        activation_kurtosis = 0.0
+    else:
+        activation_kurtosis = float(
+            (((dim_mag - mu) ** 4).mean() / (sigma ** 4 + 1e-12) - 3.0).item()
+        )
+
+    h_unit = F.normalize(H, dim=-1)
+    cardinal_proximity = float(h_unit.abs().max(dim=-1).values.mean().item())
+
+    or_norm = min(math.log(max(outlier_ratio, 1.0)) / math.log(50.0), 1.0)
+    ak_norm = min(max(activation_kurtosis, 0.0) / 20.0, 1.0)
+    cp_norm = float(cardinal_proximity)
+    quantization_hostility = (or_norm + ak_norm + cp_norm) / 3.0
+
+    return {
+        "outlier_ratio": outlier_ratio,
+        "activation_kurtosis": activation_kurtosis,
+        "cardinal_proximity": cardinal_proximity,
+        "quantization_hostility": quantization_hostility,
+    }
+
+
 def apply_givens_rotations(weight: torch.Tensor, rng: Any, rotations: int, angle: float) -> torch.Tensor:
     import numpy as np
     w = weight.detach().clone()

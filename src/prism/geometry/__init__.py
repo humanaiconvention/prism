@@ -16,7 +16,8 @@ from .core import (
     project_onto_basis,
     project_out_basis,
     compute_mean_cosine_to_ref,
-    apply_givens_rotations
+    apply_givens_rotations,
+    outlier_geometry,
 )
 
 __all__ = [
@@ -37,5 +38,6 @@ __all__ = [
     "project_onto_basis",
     "project_out_basis",
     "compute_mean_cosine_to_ref",
-    "apply_givens_rotations"
+    "apply_givens_rotations",
+    "outlier_geometry",
 ]
