@@ -182,7 +182,7 @@ def main() -> None:
     logging.info("5th percentile:  %.3f", p5)
     logging.info("95th percentile: %.3f", p95)
 
-    output_path = Path(r"D:\Genesis\logs\random_baseline_principal_angles.png")
+    output_path = Path("random_baseline_principal_angles.png")
     save_histogram(angles_deg=all_angles_deg, output_path=output_path)
     logging.info("Saved histogram: %s", output_path)
 

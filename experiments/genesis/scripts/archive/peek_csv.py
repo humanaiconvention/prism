@@ -1,6 +1,8 @@
 import csv
+import sys
 
-rows = list(csv.DictReader(open("D:/Genesis/logs/smoke_spectral.csv", "r", encoding="utf-8")))
+csv_path = sys.argv[1] if len(sys.argv) > 1 else "smoke_spectral.csv"
+rows = list(csv.DictReader(open(csv_path, "r", encoding="utf-8")))
 print(f"Total rows: {len(rows)}")
 print(f"Columns: {list(rows[0].keys())}")
 print()

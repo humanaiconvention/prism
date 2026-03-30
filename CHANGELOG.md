@@ -6,21 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-30
+
 ### Added
-- Added `RELEASE_TODO.md` to track 14-item public release checklist completion.
+- **14-module `src/prism/` package** replacing `spectral_microscope` as primary entry point:
+  - `prism.telemetry` — PRISM adapters, snapshot logic, settlement proofs (`EntropyDeltaProof`, `GeometricHealthScore`)
+  - `prism.causal` — Activation patching, Attribution Patching (AtP), knockout circuits
+  - `prism.discovery` — `CircuitScout` automated circuit extraction, graph export
+  - `prism.eval` — Grounding metrics, calibration/diversity metrics, early warning detection, geometric drift extension, temporal collapse analysis
+  - `prism.geometry` / `prism.geometry.hessian` — TurboQuant outlier-geometry, Hessian landscape diagnostics
+  - `prism.attention` — Induction head detection, weight-space SVD, attention entropy maps
+  - `prism.lens` — Logit lens, tuned lens, prediction entropy tracking
+  - `prism.probing` — Concept probing, causal steering (CIP), CKA drift
+  - `prism.sae` — TopK Sparse Autoencoder training, feature attribution
+  - `prism.mlp` — Rank restoration profile, key-value neuron mapping
+  - `prism.arch` — Recurrent attractors, positional sensitivity, linear/softmax fingerprinting
+  - `prism.phase` — Hilbert phase extraction, cross-layer PLV, FFT telemetry, phase clustering
+  - `prism.entropy` — Expansion/pruning profiles, Rényi entropy sweeps, spectral-semantic coupling
+  - `prism.runs` — Run management and logging utilities
+- `SpectralMicroscope.full_scan()` high-level API (logit lens, rank restoration, static circuit SVD, positional sensitivity).
+- `has_outlier_geometry` boolean flag on `PrismRunSummary`.
+- Genesis-152M mechanistic interpretability replication suite (`experiments/genesis/`) covering Phases 0A–13B.
+- Comprehensive test suite (`tests/`) covering all 14 modules.
+- Run scripts (`run_*.py`) and CI workflow (`.github/workflows/`).
+- `spectral_microscope` compatibility shim for backwards-compatible imports.
 
 ### Changed
-- **Research Snapshot Update (Phase 10 & 11)**: Synchronized README with the final Phase 10 research findings, including the early-mid corridor (L7-L11), OOD family sensitivity, and the natural interchange (scalar vs orthogonal remainder) diagnostics. Added Phase 11 decomposition status.
-- Finalized rank-ablation summary in README after rank-64 evaluation completed.
-- Updated README research snapshot to reflect Phase 5.1 best checkpoint, Phase 6.0 in-progress constrained gating work, and LFM2-8B-A1B targeted sweep results.
-
-### Research Snapshot Updates
+- `pyproject.toml` version bumped to `0.2.0`.
+- README overhauled with full module reference, quickstart, and Genesis-152M research snapshot.
+- CHANGELOG updated to reflect all additions since 0.1.0.
+- Research snapshot: Phase 10 findings (early-mid corridor L7-L11, OOD family sensitivity), Phase 11 decomposition, rank-64 ablation sweep finalized.
 - Rank ablation (`8/16/32/64`) final means on labeled easy/hard strata:
   - Rank 8: easy `-0.5790`, hard `-0.7552`, selectivity `-0.1762`, gate discrimination `+0.6927`.
-  - Rank 16: easy `-0.6368`, hard `-0.7790`, selectivity `-0.1422`, gate discrimination `+0.6939`.
-  - Rank 32: easy `-0.6161`, hard `-0.7794`, selectivity `-0.1633`, gate discrimination `+0.6982`.
   - Rank 64: easy `-0.6288`, hard `-0.8187`, selectivity `-0.1899`, gate discrimination `+0.7020`.
-- Sweep conclusion: rank 64 showed the strongest hard-stratum gain and highest gate discrimination in this run.
+  - Rank 64 showed strongest hard-stratum gain and highest gate discrimination.
 
 ## [0.1.0] - 2026-02-28
 

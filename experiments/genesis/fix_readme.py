@@ -1,7 +1,13 @@
-import os
+import sys
 
-source = 'D:/Genesis/GENESIS_SPECTRAL_README.md'
-target = 'D:/spectral_microscope_public/experiments/genesis_152m/README.md'
+# Usage: python fix_readme.py <source_readme> <target_readme>
+# Example: python fix_readme.py /path/to/GENESIS_SPECTRAL_README.md experiments/genesis/README.md
+if len(sys.argv) != 3:
+    print("Usage: fix_readme.py <source> <target>")
+    sys.exit(1)
+
+source = sys.argv[1]
+target = sys.argv[2]
 
 with open(source, 'r', encoding='utf-8') as f:
     content = f.read()
