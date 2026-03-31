@@ -1,7 +1,7 @@
 # Mechanistic Interpretability of Genesis-152M (PRISM Replication)
 
 **Model**: [guiferrarib/genesis-152m-instruct](https://huggingface.co/guiferrarib/genesis-152m-instruct)  
-**Version**: Phase 13B (Upstream State & Boundary Susceptibility)
+**Version**: Phase 12F (Circuit Closure & Interface Characterisation)
 **Framework**: PRISM (Phase-based Research & Interpretability Spectral Microscope)
 
 ---
@@ -118,7 +118,7 @@ GLA state compresses to a highly efficient ~13-dimensional manifold at T=1024, c
 
 ---
 
-## The Causal Reliability Program (Phase 9-13)
+## The Causal Reliability Program (Phase 9-12)
 
 ### Phase 9: The Patching Paradox
 Steering (adding a vector) remains the best causal evidence. Activation Patching (overwriting) remains negative/diagnostic-only on the 24-pair shared benchmark. Results indicate the model uses 'Aligned Injection' rather than simple state replacement.
@@ -143,11 +143,6 @@ Decomposing the natural interchange hint into basis components failed to clear s
 - **12F**: Sparse upstream head-bundles do not provide semantic-specific necessity.
 **Verdict**: The corridor is a weak, non-specific answer-adjacent access/gain interface.
 
-### Phase 13: Upstream State & Boundary Susceptibility
-- **13A**: Identifies stable pair-local susceptibility structure across mechanism families. Larger baseline geometry magnitude predicts perturbability.
-- **13B**: Bounded late-upstream recurrent-state overwrite fails to outperform matched random.
-**Verdict**: Steering gain tracks pair-local geometry / upstream-state alignment rather than a clean local circuit or universal semantic axis.
-
 ---
 
 ## Status Summary
@@ -159,7 +154,6 @@ Decomposing the natural interchange hint into basis components failed to clear s
 | Mediator Band | ✅ Complete | L7-L11 is the most responsive steering corridor. |
 | OOD Robustness | ✅ Complete | Transfer is family-sensitive and fragile. |
 | Circuit Closure | ✅ Complete | L11 W_o is a high-gain interface, not a specific semantic circuit. |
-| Upstream State | ✅ Complete | Susceptibility is pair-local and tied to baseline state alignment. |
 
 ---
 
@@ -171,8 +165,8 @@ The PRISM Phase-based Research orchestrator allows reproducing any finding:
 # List all phases
 python go.py --list
 
-# Get info on Phase 13A
-python go.py --info 13A
+# Get info on a phase
+python go.py --info 10A
 
 # Run specific phase
 python go.py 10A

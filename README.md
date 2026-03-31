@@ -234,7 +234,7 @@ from prism import (
 
 ## Genesis-152M Replication Suite
 
-`experiments/genesis/` is a complete mechanistic interpretability research suite run on [guiferrarib/genesis-152m-instruct](https://huggingface.co/guiferrarib/genesis-152m-instruct), a 152M-parameter hybrid GLA/FoX model. It covers Phases 0A through 13B and serves as a worked example of PRISM applied to a real architecture.
+`experiments/genesis/` is a complete mechanistic interpretability research suite run on [guiferrarib/genesis-152m-instruct](https://huggingface.co/guiferrarib/genesis-152m-instruct), a 152M-parameter hybrid GLA/FoX model. It covers Phases 0A through 12F and serves as a worked example of PRISM applied to a real architecture.
 
 **Selected findings:**
 
@@ -247,6 +247,7 @@ from prism import (
 | Steering corridor | L7–L11 FoX band is the most responsive; OOD transfer is family-sensitive and fragile |
 | L15 Lexical Crossover | Vocabulary ER collapses from >100 to ~28 words at the causal geometric bottleneck |
 | Period-4 oscillation | Welford ER tracking and FFT both show a power spike at f=0.25, matching GLA/GLA/GLA/FoX layout |
+| Circuit Closure (Phase 12) | L11 W_o is a high-gain output stage; the corridor is a non-specific answer-adjacent access interface |
 
 ```bash
 # List all phases

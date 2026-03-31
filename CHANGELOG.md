@@ -26,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `prism.runs` — Run management and logging utilities
 - `SpectralMicroscope.full_scan()` high-level API (logit lens, rank restoration, static circuit SVD, positional sensitivity).
 - `has_outlier_geometry` boolean flag on `PrismRunSummary`.
-- Genesis-152M mechanistic interpretability replication suite (`experiments/genesis/`) covering Phases 0A–13B.
+- Genesis-152M mechanistic interpretability replication suite (`experiments/genesis/`) covering Phases 0A–12F.
 - Comprehensive test suite (`tests/`) covering all 14 modules.
 - Run scripts (`run_*.py`) and CI workflow (`.github/workflows/`).
 - `spectral_microscope` compatibility shim for backwards-compatible imports.

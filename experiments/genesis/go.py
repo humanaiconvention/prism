@@ -620,26 +620,6 @@ PHASES = {
         "technical": "Tests preregistered head bundles from Phase 1. Results (Finding 12F) showed non-decisive bundle interactions, strengthening the non-specific access/gain account of the corridor.",
         "dependencies": ["1A", "10E"]
     },
-    "13A": {
-        "name": "Pair-Susceptibility Audit",
-        "script": "scripts/analyze_phase13a_pair_susceptibility.py",
-        "args": "--representative-csvs logs/phase12/phase12b_t_minus_1_window1_results.csv,logs/phase12/phase12d_results.csv,logs/phase12/phase12e_results.csv,logs/phase12/phase12f_results.csv --eval-json prompts/phase9_shared_eval_heldout.json",
-        "description": "Artifact-only cross-family audit of pair-level susceptibility.",
-        "why": "Determines if steering gain tracks item-specific geometry or global labels.",
-        "narrative": "A look at individual prompts reveals that some are just easier to nudge than others, regardless of what we're testing. The 'mental geometry' of the prompt itself is the best predictor of success.",
-        "technical": "Correlation audit across 4 late mechanism families. Results (Finding 13A) showed stable pair-local structure (r=0.31) strongly predicted by baseline margin (r=0.73), favoring an upstream-state access account.",
-        "dependencies": ["12B", "12D", "12E", "12F"]
-    },
-    "13B": {
-        "name": "Bounded Upstream-State Causal Test",
-        "script": "scripts/run_phase13b_bounded_state_causal_test.py",
-        "args": "--eval-json prompts/phase9_shared_eval_heldout.json --top-pairs heldout_pair_1,heldout_pair_10,heldout_pair_21,heldout_pair_4,heldout_pair_7",
-        "description": "L14 GLA recurrent-state overwrite on high-susceptibility pairs.",
-        "why": "Directly tests if the late corridor depends on upstream recurrent state.",
-        "narrative": "Final test: we tried to teleport the 'long-term memory' from one prompt to another on the prompts that seemed most sensitive. It moved the model, but not in a perfectly reliable way. The mystery of the 'Math' thought remains partly distributed.",
-        "technical": "L14 recurrent-state overwrite on the final-clause window. Results (Finding 13B) were mildly positive vs baseline but null vs random, failing to establish a semantic-specific causal rescue.",
-        "dependencies": ["13A", "9Q"]
-    }
 }
 
 def print_banner(text):
