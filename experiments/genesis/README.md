@@ -16,7 +16,7 @@ Perform mechanistic interpretability research on **Genesis-152M-Instruct**, a 15
 5. Identify the causal mechanisms of semantic steering and the fragility of OOD transfer.
 
 ### Local-First & Windows-Native Research
-A primary goal of this replication suite is to demonstrate that high-quality mechanistic interpretability can be performed on local Windows hardware. All experiments in this suite were conducted natively on Windows 11 using an NVIDIA RTX 2080 GPU, achieving ~7.3 tokens/sec via optimized PyTorch fallbacks—bypassing the need for Linux-only Triton kernels or complex WSL2 setups.
+A primary goal of this replication suite is to demonstrate that high-quality mechanistic interpretability can be performed on local Windows hardware. All experiments in this suite were conducted natively on Windows 11 using a consumer NVIDIA GPU, achieving ~7.3 tokens/sec via optimized PyTorch fallbacks—bypassing the need for Linux-only Triton kernels or complex WSL2 setups.
 
 ---
 

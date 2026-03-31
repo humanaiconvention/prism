@@ -41,4 +41,4 @@ weights/
 *.pt
 *.npz
 *.csv
-!D:\prism\experiments\genesis\prompts\*.csv
+!experiments/genesis/prompts/*.csv

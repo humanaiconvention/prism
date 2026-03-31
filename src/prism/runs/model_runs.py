@@ -30,7 +30,7 @@ import torch
 from prism import __version__ as PRISM_VERSION
 
 
-DEFAULT_LOG_ROOT = Path(r"D:\prism\logs\model-runs")
+DEFAULT_LOG_ROOT = Path(__file__).parents[3] / "logs" / "model-runs"
 
 
 def _utc_now() -> datetime:
@@ -1000,7 +1000,7 @@ def analyze_trm_physics_validation(
             "arch_seq_len": arch_seq_len,
             "reference_documents": [
                 str(trm_root / "README.md"),
-                str(trm_root / "BEAST_DEMO_RESULTS.md"),
+                str(trm_root / "DEMO_RESULTS.md"),
                 str(trm_root / "SESSION_STATE.md"),
             ],
         },
@@ -1210,7 +1210,7 @@ def analyze_trm_physics_validation(
         run.comparison = {
             "reference_documents": [
                 str(trm_root / "README.md"),
-                str(trm_root / "BEAST_DEMO_RESULTS.md"),
+                str(trm_root / "DEMO_RESULTS.md"),
                 str(trm_root / "SESSION_STATE.md"),
             ],
         }
@@ -1261,7 +1261,7 @@ def analyze_trm_physics_validation(
     run.comparison = {
         "reference_documents": [
             str(trm_root / "README.md"),
-            str(trm_root / "BEAST_DEMO_RESULTS.md"),
+            str(trm_root / "DEMO_RESULTS.md"),
             str(trm_root / "SESSION_STATE.md"),
         ],
         "comparison_notes": [
@@ -1277,8 +1277,8 @@ def analyze_trm_physics_validation(
             notes="Project overview and canonical setup notes.",
         ),
         ArtifactRef(
-            label="TRM BEAST demo results",
-            path=str(trm_root / "BEAST_DEMO_RESULTS.md"),
+            label="TRM demo results",
+            path=str(trm_root / "DEMO_RESULTS.md"),
             kind="markdown",
             notes="Prior physics-validation narrative used as context for the smoke run.",
         ),
