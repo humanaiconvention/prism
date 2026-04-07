@@ -1,0 +1,194 @@
+{
+  "model": "Qwen/Qwen3.5-2B",
+  "label": "qwen35-2b-base",
+  "architecture": "qwen3_5_text",
+  "num_hidden_layers": 24,
+  "hidden_size": 2048,
+  "num_prompts": 20,
+  "elapsed_s": 74.0,
+  "aggregate": {
+    "mean_quantization_hostility": 0.72,
+    "mean_outlier_ratio": 24.0878,
+    "mean_activation_kurtosis": 358.0028,
+    "mean_cardinal_proximity": 0.3659,
+    "worst_layer_idx": 1,
+    "best_layer_idx": 24
+  },
+  "layer_summaries": [
+    {
+      "layer_idx": 0,
+      "mean_quantization_hostility": 0.2436,
+      "mean_outlier_ratio": 3.7,
+      "mean_activation_kurtosis": 6.2089,
+      "mean_cardinal_proximity": 0.0961
+    },
+    {
+      "layer_idx": 1,
+      "mean_quantization_hostility": 0.821,
+      "mean_outlier_ratio": 39.3089,
+      "mean_activation_kurtosis": 934.5893,
+      "mean_cardinal_proximity": 0.537
+    },
+    {
+      "layer_idx": 2,
+      "mean_quantization_hostility": 0.7661,
+      "mean_outlier_ratio": 30.0085,
+      "mean_activation_kurtosis": 770.7302,
+      "mean_cardinal_proximity": 0.4416
+    },
+    {
+      "layer_idx": 3,
+      "mean_quantization_hostility": 0.7787,
+      "mean_outlier_ratio": 32.3933,
+      "mean_activation_kurtosis": 661.1602,
+      "mean_cardinal_proximity": 0.4513
+    },
+    {
+      "layer_idx": 4,
+      "mean_quantization_hostility": 0.7081,
+      "mean_outlier_ratio": 22.9619,
+      "mean_activation_kurtosis": 403.7933,
+      "mean_cardinal_proximity": 0.3558
+    },
+    {
+      "layer_idx": 5,
+      "mean_quantization_hostility": 0.7099,
+      "mean_outlier_ratio": 22.2117,
+      "mean_activation_kurtosis": 328.6026,
+      "mean_cardinal_proximity": 0.3482
+    },
+    {
+      "layer_idx": 6,
+      "mean_quantization_hostility": 0.7244,
+      "mean_outlier_ratio": 24.1662,
+      "mean_activation_kurtosis": 340.8416,
+      "mean_cardinal_proximity": 0.3695
+    },
+    {
+      "layer_idx": 7,
+      "mean_quantization_hostility": 0.729,
+      "mean_outlier_ratio": 23.782,
+      "mean_activation_kurtosis": 289.1985,
+      "mean_cardinal_proximity": 0.3854
+    },
+    {
+      "layer_idx": 8,
+      "mean_quantization_hostility": 0.7126,
+      "mean_outlier_ratio": 21.8917,
+      "mean_activation_kurtosis": 219.2941,
+      "mean_cardinal_proximity": 0.3641
+    },
+    {
+      "layer_idx": 9,
+      "mean_quantization_hostility": 0.7014,
+      "mean_outlier_ratio": 20.4366,
+      "mean_activation_kurtosis": 186.3881,
+      "mean_cardinal_proximity": 0.3451
+    },
+    {
+      "layer_idx": 10,
+      "mean_quantization_hostility": 0.701,
+      "mean_outlier_ratio": 20.6147,
+      "mean_activation_kurtosis": 194.3946,
+      "mean_cardinal_proximity": 0.3409
+    },
+    {
+      "layer_idx": 11,
+      "mean_quantization_hostility": 0.7244,
+      "mean_outlier_ratio": 23.9655,
+      "mean_activation_kurtosis": 260.0148,
+      "mean_cardinal_proximity": 0.3707
+    },
+    {
+      "layer_idx": 12,
+      "mean_quantization_hostility": 0.7,
+      "mean_outlier_ratio": 21.0542,
+      "mean_activation_kurtosis": 202.4423,
+      "mean_cardinal_proximity": 0.3301
+    },
+    {
+      "layer_idx": 13,
+      "mean_quantization_hostility": 0.7058,
+      "mean_outlier_ratio": 22.1237,
+      "mean_activation_kurtosis": 218.9748,
+      "mean_cardinal_proximity": 0.3358
+    },
+    {
+      "layer_idx": 14,
+      "mean_quantization_hostility": 0.7006,
+      "mean_outlier_ratio": 21.4174,
+      "mean_activation_kurtosis": 218.1837,
+      "mean_cardinal_proximity": 0.3288
+    },
+    {
+      "layer_idx": 15,
+      "mean_quantization_hostility": 0.6532,
+      "mean_outlier_ratio": 16.7458,
+      "mean_activation_kurtosis": 149.6847,
+      "mean_cardinal_proximity": 0.2885
+    },
+    {
+      "layer_idx": 16,
+      "mean_quantization_hostility": 0.6617,
+      "mean_outlier_ratio": 16.3483,
+      "mean_activation_kurtosis": 129.7089,
+      "mean_cardinal_proximity": 0.2758
+    },
+    {
+      "layer_idx": 17,
+      "mean_quantization_hostility": 0.6784,
+      "mean_outlier_ratio": 18.3872,
+      "mean_activation_kurtosis": 182.1837,
+      "mean_cardinal_proximity": 0.2974
+    },
+    {
+      "layer_idx": 18,
+      "mean_quantization_hostility": 0.6839,
+      "mean_outlier_ratio": 19.2464,
+      "mean_activation_kurtosis": 210.0409,
+      "mean_cardinal_proximity": 0.3019
+    },
+    {
+      "layer_idx": 19,
+      "mean_quantization_hostility": 0.7835,
+      "mean_outlier_ratio": 34.0054,
+      "mean_activation_kurtosis": 615.5382,
+      "mean_cardinal_proximity": 0.4545
+    },
+    {
+      "layer_idx": 20,
+      "mean_quantization_hostility": 0.7155,
+      "mean_outlier_ratio": 23.8907,
+      "mean_activation_kurtosis": 322.1095,
+      "mean_cardinal_proximity": 0.3432
+    },
+    {
+      "layer_idx": 21,
+      "mean_quantization_hostility": 0.7518,
+      "mean_outlier_ratio": 28.5046,
+      "mean_activation_kurtosis": 455.292,
+      "mean_cardinal_proximity": 0.4035
+    },
+    {
+      "layer_idx": 22,
+      "mean_quantization_hostility": 0.7749,
+      "mean_outlier_ratio": 31.7455,
+      "mean_activation_kurtosis": 600.8202,
+      "mean_cardinal_proximity": 0.445
+    },
+    {
+      "layer_idx": 23,
+      "mean_quantization_hostility": 0.76,
+      "mean_outlier_ratio": 28.9438,
+      "mean_activation_kurtosis": 590.5179,
+      "mean_cardinal_proximity": 0.4246
+    },
+    {
+      "layer_idx": 24,
+      "mean_quantization_hostility": 0.6335,
+      "mean_outlier_ratio": 13.9529,
+      "mean_activation_kurtosis": 107.5631,
+      "mean_cardinal_proximity": 0.2441
+    }
+  ]
+}
