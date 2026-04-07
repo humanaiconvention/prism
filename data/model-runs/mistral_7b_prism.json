@@ -1,0 +1,295 @@
+{
+  "model": "mistralai/Mistral-7B-Instruct-v0.3",
+  "architecture": "mistral",
+  "num_hidden_layers": 32,
+  "hidden_size": 4096,
+  "quantization": "4-bit NF4 (bitsandbytes)",
+  "num_prompts": 20,
+  "aggregate": {
+    "mean_quantization_hostility": 0.7477,
+    "mean_outlier_ratio": 297.989,
+    "mean_activation_kurtosis": 2946.0215,
+    "mean_cardinal_proximity": 0.2796,
+    "worst_layer_idx": 15,
+    "best_layer_idx": 1,
+    "nan_layers": []
+  },
+  "layer_summaries": [
+    {
+      "layer_idx": 0,
+      "mean_quantization_hostility": 0.2063,
+      "mean_outlier_ratio": 6.1306,
+      "mean_activation_kurtosis": -0.0007,
+      "mean_cardinal_proximity": 0.1073
+    },
+    {
+      "layer_idx": 1,
+      "mean_quantization_hostility": 0.5142,
+      "mean_outlier_ratio": 13.4076,
+      "mean_activation_kurtosis": 33.5211,
+      "mean_cardinal_proximity": 0.2114
+    },
+    {
+      "layer_idx": 2,
+      "mean_quantization_hostility": 0.75,
+      "mean_outlier_ratio": 926.618,
+      "mean_activation_kurtosis": 3833.7103,
+      "mean_cardinal_proximity": 0.25
+    },
+    {
+      "layer_idx": 3,
+      "mean_quantization_hostility": 0.756,
+      "mean_outlier_ratio": 822.439,
+      "mean_activation_kurtosis": 3823.9876,
+      "mean_cardinal_proximity": 0.268
+    },
+    {
+      "layer_idx": 4,
+      "mean_quantization_hostility": 0.7521,
+      "mean_outlier_ratio": 722.4644,
+      "mean_activation_kurtosis": 3817.4248,
+      "mean_cardinal_proximity": 0.2562
+    },
+    {
+      "layer_idx": 5,
+      "mean_quantization_hostility": 0.7494,
+      "mean_outlier_ratio": 646.8048,
+      "mean_activation_kurtosis": 3805.7687,
+      "mean_cardinal_proximity": 0.2482
+    },
+    {
+      "layer_idx": 6,
+      "mean_quantization_hostility": 0.745,
+      "mean_outlier_ratio": 574.7434,
+      "mean_activation_kurtosis": 3788.6346,
+      "mean_cardinal_proximity": 0.235
+    },
+    {
+      "layer_idx": 7,
+      "mean_quantization_hostility": 0.748,
+      "mean_outlier_ratio": 511.198,
+      "mean_activation_kurtosis": 3763.7391,
+      "mean_cardinal_proximity": 0.2439
+    },
+    {
+      "layer_idx": 8,
+      "mean_quantization_hostility": 0.7506,
+      "mean_outlier_ratio": 471.6332,
+      "mean_activation_kurtosis": 3736.0441,
+      "mean_cardinal_proximity": 0.2519
+    },
+    {
+      "layer_idx": 9,
+      "mean_quantization_hostility": 0.7566,
+      "mean_outlier_ratio": 429.107,
+      "mean_activation_kurtosis": 3717.1353,
+      "mean_cardinal_proximity": 0.2698
+    },
+    {
+      "layer_idx": 10,
+      "mean_quantization_hostility": 0.7558,
+      "mean_outlier_ratio": 402.1536,
+      "mean_activation_kurtosis": 3685.0035,
+      "mean_cardinal_proximity": 0.2674
+    },
+    {
+      "layer_idx": 11,
+      "mean_quantization_hostility": 0.7611,
+      "mean_outlier_ratio": 381.0844,
+      "mean_activation_kurtosis": 3642.9519,
+      "mean_cardinal_proximity": 0.2834
+    },
+    {
+      "layer_idx": 12,
+      "mean_quantization_hostility": 0.7599,
+      "mean_outlier_ratio": 358.9021,
+      "mean_activation_kurtosis": 3600.8287,
+      "mean_cardinal_proximity": 0.2796
+    },
+    {
+      "layer_idx": 13,
+      "mean_quantization_hostility": 0.7593,
+      "mean_outlier_ratio": 342.4779,
+      "mean_activation_kurtosis": 3556.3072,
+      "mean_cardinal_proximity": 0.2778
+    },
+    {
+      "layer_idx": 14,
+      "mean_quantization_hostility": 0.762,
+      "mean_outlier_ratio": 322.9632,
+      "mean_activation_kurtosis": 3527.1977,
+      "mean_cardinal_proximity": 0.2859
+    },
+    {
+      "layer_idx": 15,
+      "mean_quantization_hostility": 0.7717,
+      "mean_outlier_ratio": 304.9338,
+      "mean_activation_kurtosis": 3482.6717,
+      "mean_cardinal_proximity": 0.315
+    },
+    {
+      "layer_idx": 16,
+      "mean_quantization_hostility": 0.7647,
+      "mean_outlier_ratio": 275.148,
+      "mean_activation_kurtosis": 3423.2478,
+      "mean_cardinal_proximity": 0.294
+    },
+    {
+      "layer_idx": 17,
+      "mean_quantization_hostility": 0.7627,
+      "mean_outlier_ratio": 243.995,
+      "mean_activation_kurtosis": 3357.152,
+      "mean_cardinal_proximity": 0.2882
+    },
+    {
+      "layer_idx": 18,
+      "mean_quantization_hostility": 0.7681,
+      "mean_outlier_ratio": 219.1859,
+      "mean_activation_kurtosis": 3290.646,
+      "mean_cardinal_proximity": 0.3044
+    },
+    {
+      "layer_idx": 19,
+      "mean_quantization_hostility": 0.7586,
+      "mean_outlier_ratio": 188.2387,
+      "mean_activation_kurtosis": 3153.6821,
+      "mean_cardinal_proximity": 0.2757
+    },
+    {
+      "layer_idx": 20,
+      "mean_quantization_hostility": 0.7576,
+      "mean_outlier_ratio": 166.3238,
+      "mean_activation_kurtosis": 3042.9182,
+      "mean_cardinal_proximity": 0.2736
+    },
+    {
+      "layer_idx": 21,
+      "mean_quantization_hostility": 0.7536,
+      "mean_outlier_ratio": 147.9039,
+      "mean_activation_kurtosis": 2936.9937,
+      "mean_cardinal_proximity": 0.2634
+    },
+    {
+      "layer_idx": 22,
+      "mean_quantization_hostility": 0.753,
+      "mean_outlier_ratio": 138.1947,
+      "mean_activation_kurtosis": 2842.4953,
+      "mean_cardinal_proximity": 0.2647
+    },
+    {
+      "layer_idx": 23,
+      "mean_quantization_hostility": 0.7542,
+      "mean_outlier_ratio": 132.0233,
+      "mean_activation_kurtosis": 2763.2361,
+      "mean_cardinal_proximity": 0.2709
+    },
+    {
+      "layer_idx": 24,
+      "mean_quantization_hostility": 0.7554,
+      "mean_outlier_ratio": 124.5752,
+      "mean_activation_kurtosis": 2664.1602,
+      "mean_cardinal_proximity": 0.277
+    },
+    {
+      "layer_idx": 25,
+      "mean_quantization_hostility": 0.7562,
+      "mean_outlier_ratio": 119.0568,
+      "mean_activation_kurtosis": 2585.8496,
+      "mean_cardinal_proximity": 0.2819
+    },
+    {
+      "layer_idx": 26,
+      "mean_quantization_hostility": 0.758,
+      "mean_outlier_ratio": 113.4864,
+      "mean_activation_kurtosis": 2500.224,
+      "mean_cardinal_proximity": 0.2898
+    },
+    {
+      "layer_idx": 27,
+      "mean_quantization_hostility": 0.7576,
+      "mean_outlier_ratio": 106.9995,
+      "mean_activation_kurtosis": 2378.4526,
+      "mean_cardinal_proximity": 0.2938
+    },
+    {
+      "layer_idx": 28,
+      "mean_quantization_hostility": 0.7593,
+      "mean_outlier_ratio": 98.6308,
+      "mean_activation_kurtosis": 2186.5343,
+      "mean_cardinal_proximity": 0.3053
+    },
+    {
+      "layer_idx": 29,
+      "mean_quantization_hostility": 0.7506,
+      "mean_outlier_ratio": 84.8201,
+      "mean_activation_kurtosis": 1964.4377,
+      "mean_cardinal_proximity": 0.3008
+    },
+    {
+      "layer_idx": 30,
+      "mean_quantization_hostility": 0.7603,
+      "mean_outlier_ratio": 69.6704,
+      "mean_activation_kurtosis": 1663.9256,
+      "mean_cardinal_proximity": 0.341
+    },
+    {
+      "layer_idx": 31,
+      "mean_quantization_hostility": 0.7545,
+      "mean_outlier_ratio": 50.3369,
+      "mean_activation_kurtosis": 1350.9629,
+      "mean_cardinal_proximity": 0.3583
+    },
+    {
+      "layer_idx": 32,
+      "mean_quantization_hostility": 0.7114,
+      "mean_outlier_ratio": 26.1283,
+      "mean_activation_kurtosis": 352.8449,
+      "mean_cardinal_proximity": 0.3212
+    }
+  ],
+  "prompts": [
+    "The mitochondria is the powerhouse of the cell.",
+    "Water boils at 100 degrees Celsius at sea level.",
+    "I feel a deep sense of gratitude when I watch the sunrise.",
+    "The grief after losing someone you love never fully disappears.",
+    "Artificial intelligence systems trained on human-generated text inherit the perspectives, biases, and knowledge gaps present in that corpus. Grounding AI in verified, consented contributions from real people can mitigate this by anchoring representations in lived experience rather than filtered public records.",
+    "The tension between privacy and collective knowledge is one of the defining challenges of the twenty-first century. Individuals have legitimate interests in controlling their own narratives, yet society benefits enormously from open sharing of information and lived expertise.",
+    "Why?",
+    "Help.",
+    "It depends.",
+    "La inteligencia artificial debe servir a todas las personas, sin distinción.",
+    "L'expérience humaine est irréductible à des données textuelles.",
+    "人类的智慧不能被简化为数字信号。",
+    "التعاون بين البشر والذكاء الاصطناعي يتطلب الثقة والشفافية.",
+    "A diversidade de perspectivas fortalece qualquer sistema de aprendizado.",
+    "def outlier_ratio(H): return H.abs().mean(0).max() / H.abs().mean()",
+    "42, 17, 9, 3.14159, 2.71828, 1.41421, 0.577",
+    "No person should be coerced into providing their data for AI training.",
+    "I am not sure whether what I experience constitutes genuine understanding.",
+    "Consent must be informed, revocable, and freely given.",
+    "Le consentement doit être éclairé, révocable et librement accordé."
+  ],
+  "responses": [
+    "It is responsible for producing energy in the form of ATP (adenosine triphosphate) through a process called cellular respiration. The mitochondria is also responsible for several other important cellular functions, such as the regulation of cellular metabolism, the production of certain proteins and enzymes, and the regulation of cell death (apoptosis).\n\nThe mitochondria is composed of two main parts: the outer mitochondrial membrane and the inner mitochondrial membrane. The outer mitochondrial membrane is a phospholipid bilayer that separates the mitochondria from the cytoplasm. The inner mitochondrial membrane is also a phospholipid bilayer, but it is much thicker and contains many proteins and lipids that are essential for the production of ATP.\n\nThe inner mitochondrial membrane contains a series of folds called cristae, which increase the surface area of the membrane and provide a large area for the enzymes involved in ATP production to work. The space between the inner and outer mitochondrial membranes is called the intermembrane space.\n\nThe mitochondria also contains a small circular DNA molecule called the mitochondrial genome. This DNA contains the instructions for the synthesis of a small number of proteins that are essential for the function of the mitochondria. The majority of the proteins in the mitochondria are encoded by nuclear DNA and are synthesized in the cytoplasm before being imported into the mitochondria.\n\nThe mitochondria is a dynamic organelle that is constantly undergoing changes in shape and size in response to the energy demands of the cell. This is facilitated by the movement of proteins called dynamin and fission proteins, which help to break down and reassemble the mitochondria as needed.\n\nIn summary, the mitochondria is a vital organelle that plays a central role in cellular metabolism and energy production. It is composed of two main parts, the outer and inner mitochondrial membranes, and contains a small circular DNA molecule called the mitochondrial genome. The mitochondria is a dynamic organelle that is constantly undergoing changes in shape and size in response to the energy demands of the cell.",
+    "But at higher altitudes, the boiling point is lower. This is due to the decrease in atmospheric pressure with altitude. The boiling point of a liquid is determined by the balance between the vapor pressure of the liquid and the pressure exerted on the liquid by the atmosphere. At higher altitudes, the atmospheric pressure is lower, so the vapor pressure of the liquid can exceed the atmospheric pressure, causing the liquid to boil at a lower temperature. This phenomenon is known as the Clausius-Clapeyron relation. The exact decrease in boiling point with altitude depends on the specific liquid and the altitude, but it is generally around 1 degree Celsius for every 300 meters of altitude.",
+    "It’s a reminder that every day is a new beginning, a chance to start over, to make things right, to be better. It’s a reminder that no matter how dark the night, the sun will always rise again. It’s a reminder that there is always hope, always a chance for change, always a chance for growth. It’s a reminder that no matter what challenges we face, we can always find the strength to keep going, to keep moving forward. It’s a reminder that we are never alone, that we are all connected, that we are all part of something much larger than ourselves. It’s a reminder that we are all capable of great things, that we all have the power to make a difference, to leave a lasting impact on the world. It’s a reminder that we are all worthy of love, of happiness, of peace. It’s a reminder that we are all worthy of a beautiful sunrise.",
+    "It’s a part of you, a part of your life, and it’s something you learn to live with.\n\nBut sometimes, it can be hard to know how to cope with that grief, especially when it comes to holidays and special occasions.\n\nFor many people, the holiday season is a time of joy and celebration. But for those who have lost someone close to them, it can be a difficult and emotional time.\n\nHere are some tips for coping with grief during the holiday season:\n\n1. Allow yourself to feel your emotions. It’s okay to feel sad, angry, or overwhelmed. Don’t try to suppress your feelings or pretend they don’t exist.\n2. Take care of yourself. Make sure you’re getting enough sleep, eating well, and taking time to relax and do things you enjoy.\n3. Reach out to others. Talk to friends, family, or a therapist about your feelings. You don’t have to go through this alone.\n4. Create new traditions. If you usually celebrate the holidays in a certain way, consider creating new traditions that honor your loved one and help you remember them in a positive way.\n5. Take a break if you need to. If the holiday season is too much for you, it’s okay to take a break and do something that feels more comfortable for you.\n6. Remember that it’s okay to feel a mix of emotions. It’s normal to feel happy and sad at the same time. Don’t try to label your feelings as “good” or “bad.”\n7. Focus on the present. Try to stay in the moment and enjoy the people and things around you.\n8. Take things one day at a time. The holiday season can be a long and overwhelming time. Try to take things one day at a time and focus on getting through each day.\n9. Be kind to yourself. Remember that it’s okay to take breaks, ask for help, and do what you need to do to take care of yourself.\n10. Remember that it’s okay to grieve. It’s okay to feel sad and miss your loved one. It’s okay to cry and feel overwhelmed. It’s okay to take the time you need to heal.\n\nThe holiday season can be a difficult time for those who are grieving, but it’s important to remember that it’s okay to feel your",
+    "In this talk, I will discuss the design and implementation of a system for collecting and verifying personal stories from people with lived experience of a particular issue. I will describe the challenges we faced in designing a system that is accessible, trustworthy, and engaging, and the lessons we learned from our pilot study with 100 participants. I will also discuss the potential for this approach to be used in a range of applications, from improving AI systems to supporting marginalized communities.\n\nBio:\n\nDr. Sarah Farooq is a Research Scientist at the MIT Media Lab, where she works on the Ethics and Governance of AI project. Her research focuses on the ethical and social implications of AI, with a particular focus on the role of human-generated data in AI systems. She has a PhD in Computer Science from the University of Cambridge, where she worked on the design and implementation of a system for collecting and verifying personal stories from people with lived experience of a particular issue. She has also worked on a range of other projects, including developing a system for detecting and mitigating online harassment, and studying the ethical and social implications of AI in healthcare.",
+    "The tension is particularly acute in the context of the COVID-19 pandemic. On the one hand, the pandemic has highlighted the importance of sharing information and expertise to combat the virus. On the other hand, the pandemic has also raised concerns about the privacy implications of sharing information, particularly in the context of contact tracing and vaccine passports.\n\nIn this post, I want to explore the tension between privacy and collective knowledge in the context of the COVID-19 pandemic, and offer some thoughts on how we might navigate this tension.\n\n## The Importance of Sharing Information\n\nThe COVID-19 pandemic has underscored the importance of sharing information and expertise. In the early days of the pandemic, there was a lack of information about the virus, its transmission, and its effects. This lack of information led to confusion, fear, and misinformation.\n\nAs more information has become available, however, we have been able to better understand the virus and develop strategies to combat it. For example, we now know that the virus is primarily spread through respiratory droplets, and that wearing masks and social distancing can help prevent transmission. We also have a better understanding of the symptoms of the virus, and of the risks posed to different groups of people.\n\nSharing information has also been crucial in the development and distribution of vaccines. Scientists and researchers have shared their findings and collaborated to develop vaccines that are safe and effective. Governments and health organizations have shared information about the vaccines, their efficacy, and their safety, and have worked to distribute them to as many people as possible.\n\n## The Privacy Implications of Sharing Information\n\nWhile sharing information is crucial in combating the pandemic, it also raises privacy concerns. For example, contact tracing apps collect information about individuals' movements and interactions, which can be used to identify individuals who have been in close contact with infected individuals. This information can be used to alert individuals who may have been exposed to the virus, and to help public health officials track the spread of the virus.\n\nHowever, the collection and use of this information raises privacy concerns. Individuals may be concerned about the government or other entities having access to their personal information, and about the potential for this information to be used for purposes other than contact tracing. There are also concerns about the security of the information collected by contact tracing apps, and about the potential for this information to be hacked or leaked.",
+    "Because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd because it’s a great way to get your message out there.\n\nAnd",
+    "I have a 2004 Honda Civic EX. I have a problem with the power windows. The driver's side window will not go up or down. I have checked the fuse and it is fine. I have also checked the window motor and it is fine. I have also checked the window regulator and it is fine. I have also checked the window switch and it is fine. I have also checked the window cable and it is fine. I have also checked the window motor relay and it is fine. I have also checked the window motor wiring and it is fine. I have also checked the window regulator wiring and it is fine. I have also checked the window switch wiring and it is fine. I have also checked the window motor fuse and it is fine. I have also checked the window regulator fuse and it is fine. I have also checked the window motor relay fuse and it is fine. I have also checked the window regulator relay and it is fine. I have also checked the window motor wiring harness and it is fine. I have also checked the window regulator wiring harness and it is fine. I have also checked the window motor connector and it is fine. I have also checked the window regulator connector and it is fine. I have also checked the window motor ground and it is fine. I have also checked the window regulator ground and it is fine. I have also checked the window motor power and it is fine. I have also checked the window regulator power and it is fine. I have also checked the window motor voltage and it is fine. I have also checked the window regulator voltage and it is fine. I have also checked the window motor resistance and it is fine. I have also checked the window regulator resistance and it is fine. I have also checked the window motor continuity and it is fine. I have also checked the window regulator continuity and it is fine. I have also checked the window motor current and it is fine. I have also checked the window regulator current and it is fine. I have also checked the window motor temperature and it is fine. I have also checked the window regulator temperature and it is fine. I have also checked the window motor speed and it is fine. I have also checked the window regulator speed and it is fine. I have also checked the window motor torque and it is fine. I have also checked the window reg",
+    "If you are a US citizen, you can travel to Canada without a visa for up to 180 days. However, if you plan to stay longer or work in Canada, you will need a work permit.\n\nIf you are a citizen of a country other than the United States, you will need a visa to enter Canada. The type of visa you need will depend on the purpose of your visit. For example, if you are visiting for tourism, you may be eligible for a visitor visa. If you are planning to work in Canada, you will need a work permit.\n\nIt's always a good idea to check the requirements for your specific situation with the Canadian government or a Canadian immigration lawyer. They can provide you with the most accurate and up-to-date information.",
+    "# AI for All\n\n## AI for All\n\nAI for All is a global initiative to make AI accessible to everyone, regardless of their background, gender, or location. The initiative aims to promote the development and use of AI in a way that benefits all people, and to ensure that AI is used in a responsible and ethical manner.\n\nThe AI for All initiative is led by the Partnership on AI (PAI), a consortium of leading technology companies, academic institutions, and non-governmental organizations. PAI is dedicated to advancing AI in a way that benefits people and society, and to ensuring that AI is developed and used in a responsible and ethical manner.\n\nThe AI for All initiative includes several key components:\n\n1. Education and training: PAI is working to make AI education and training more accessible to people around the world, particularly those from underrepresented groups. This includes developing and disseminating educational materials, providing scholarships and fellowships, and partnering with educational institutions to offer AI courses and programs.\n2. Research and development: PAI is supporting research and development efforts that focus on making AI more accessible and usable for people with diverse backgrounds and needs. This includes research on AI for social good, AI for healthcare, and AI for education, as well as efforts to make AI more accessible to people with disabilities.\n3. Policy and advocacy: PAI is working to ensure that AI policy is developed and implemented in a way that benefits all people, and to advocate for policies that promote accessibility, inclusivity, and ethical AI. This includes advocating for policies that promote data privacy, fairness, and transparency, and that ensure that AI is used in a way that benefits society as a whole.\n4. Community building: PAI is building a global community of AI practitioners, researchers, and advocates who are committed to making AI accessible and beneficial for all people. This includes organizing events, workshops, and conferences, and providing resources and support for AI practitioners and researchers.\n\nThe AI for All initiative is an important step towards ensuring that AI is developed and used in a way that benefits all people, and that it is used in a responsible and ethical manner. By promoting accessibility, inclusivity, and ethical AI, the initiative is helping to ensure that AI is a force for good in the world.",
+    "# The Human Experience Cannot Be Reduced to Textual Data\n\n## Introduction\n\nThe human experience is a complex and multifaceted phenomenon that cannot be reduced to textual data. While textual data can provide valuable insights into human behavior, it is important to recognize its limitations and to consider other forms of data and methods of analysis in order to gain a more complete understanding of the human experience.\n\nTextual data is a type of data that is composed of written or spoken language. It can take many forms, including written documents, spoken conversations, and social media posts. Textual data is often used in research and analysis to gain insights into human behavior, attitudes, and beliefs.\n\nHowever, textual data has several limitations that should be taken into account when using it to study the human experience. One limitation is that textual data is often subject to interpretation, as the meaning of words and phrases can vary depending on the context in which they are used. This can make it difficult to draw accurate conclusions from textual data, as different researchers may interpret the same data in different ways.\n\nAnother limitation of textual data is that it only provides a partial view of the human experience. Textual data is limited to the words and phrases that are actually written or spoken, and it does not capture non-verbal cues such as tone of voice, facial expressions, and body language. These non-verbal cues can provide important information about a person's emotions, intentions, and attitudes, and they are often overlooked in textual data analysis.\n\nIn addition, textual data is often biased, as it is often produced by a select group of people who have access to certain resources and opportunities. This can lead to a skewed view of the human experience, as the perspectives and experiences of certain groups of people may be underrepresented or overlooked.\n\nFinally, textual data is often limited in scope, as it only provides a snapshot of a particular moment in time. This can make it difficult to draw conclusions about broader patterns and trends, as the data may not be representative of the larger population.\n\nIn conclusion, while textual data can provide valuable insights into the human experience, it is important to recognize its limitations and to consider other forms of data and methods of analysis in order to gain a more complete understanding of the human experience. Non-verbal cues, such as tone of voice, facial expressions, and body",
+    "人类的智慧是由复杂的神经网络组成的，这些神经网络是由数百亿个神经元组成的。这些神经元之间存在着复杂的连接，这些连接是由神经元之间的信息交换所形成的。这些信息交换是由电化学和化学反应所实现的。\n\n人类的智慧是由这些复杂的神经网络和信息交换所形成的。这些神经网络和信息交换是由电化学和化学反应所驱动的。因此，人类的智慧不能被简化为数字信号。\n\n人类的智慧是由复杂的神经网络组成的，这些神经网络是由数百亿个神经元组成的。这些神经元之间存在着复杂的连接，这些连接是由神经元之间的信息交换所形成的。这些信息交换是由电化学和化学反应所实现的。\n\n人类的智慧是由这些复杂的神经网络和信息交换所形成的。这些神经网络和信息交换是由电化学和化学反应所驱动的。因此，人类的智慧不能被简化为数字信号。\n\n人类的智慧是由复杂的神经网络组成的，这些神经网络是由数百亿个神经元组成的。这些神经元之间存在着复杂的连接，这些连接是由神经元之间的信息交换所形成的。这些信息交换是由电化学和化学反应所实现的。\n\n人类的智慧是由这些复杂的神经网络和信息交换所形成的。这些神经网络和信息交换是由电化学和化学反应",
+    "The collaboration between humans and artificial intelligence requires trust and transparency.\n\nThis Arabic quote translates to \"Collaboration between humans and artificial intelligence requires trust and transparency.\" It highlights the importance of building trust and maintaining transparency in the relationship between humans and AI, as the quote suggests that these qualities are essential for successful collaboration. This is particularly relevant in the context of AI ethics, as ensuring that AI systems are transparent and trustworthy is crucial for their acceptance and integration into society.\n\nThe quote also emphasizes the idea that humans and AI should work together, rather than one replacing the other. This is an important perspective, as it recognizes the unique strengths and capabilities of both humans and AI, and encourages the development of systems that leverage these strengths to achieve shared goals.\n\nOverall, this quote underscores the need for a thoughtful and ethical approach to the development and deployment of AI, one that prioritizes trust, transparency, and collaboration between humans and AI.",
+    "A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fortalece qualquer sistema de aprendizado. A diversidade de perspectivas fort",
+    "def outlier_score(H):\n    return (H.abs().mean(0) - H.abs().mean()) / H.abs().std()\n\ndef outlier_filter(H, threshold=3.0):\n    return H[(outlier_score(H) < threshold)]\n\ndef outlier_remove(H, threshold=3.0):\n    return H[~(outlier_score(H) > threshold)]\n\ndef outlier_fill(H, threshold=3.0):\n    return H.fillna(H[~(outlier_score(H) > threshold)].mean())\n\ndef outlier_replace(H, threshold=3.0, value=0):\n    return H.replace(H[outlier_score(H) > threshold], value)\n\ndef outlier_median(H, threshold=3.0):\n    return H[~(outlier_score(H) > threshold)].median()\n\ndef outlier_mean(H, threshold=3.0):\n    return H[~(outlier_score(H) > threshold)].mean()\n\ndef outlier_std(H, threshold=3.0):\n    return H[~(outlier_score(H) > threshold)].std()\n\ndef outlier_quantile(H, threshold=3.0, q=0.05):\n    return H[~(outlier_score(H) > threshold)].quantile(q)\n\ndef outlier_percentile(H, threshold=3.0, p=95):\n    return H[~(outlier_score(H) > threshold)].percentile(p)\n\ndef outlier_interquartile(H, threshold=3.0):\n    return H[~(outlier_score(H) > threshold)].quantile(0.75) - H[~(outlier_score(H) > threshold)].quantile(0.25)\n\ndef outlier_zscore(H):\n    return H.abs().mean(0) / H.abs().std()\n\ndef outlier_",
+    "215, 0.318309, 0.271828, 0.141421, 0.027344, 0.019894, 0.016656, 0.015708, 0.014649, 0.014142, 0.013836, 0.013562, 0.013393, 0.013267, 0.013162, 0.013071, 0.012980, 0.012889, 0.012798, 0.012707, 0.012616, 0.012525, 0.012434, 0.012343, 0.012252, 0.012161, 0.012070, 0.011979, 0.011888, 0.011797, 0.011706, 0.011615, 0.011524, 0.011433, 0.011342, 0.011251, 0.011160, 0.011069, 0.010978, 0.010887, 0.010796, 0.010705, 0.010614, 0.010523, 0.010432, 0.010341, 0.010250, 0.010159, 0.010068, 0.009977, 0.009886, 0.00979",
+    "The European Union’s General Data Protection Regulation (GDPR) is a landmark piece of legislation that has set a new standard for data protection and privacy rights. It provides individuals with greater control over their personal data, and imposes strict obligations on organizations that collect, process, and store such data.\n\nOne of the key principles of the GDPR is the requirement for consent. This means that individuals must be fully informed about how their data will be used, and must actively opt-in to such use. This is particularly important in the context of artificial intelligence (AI), where large amounts of data are required to train AI models.\n\nThe use of AI in various sectors, such as healthcare, finance, and transportation, has the potential to bring significant benefits. However, it is also important to recognize the risks associated with AI, particularly in terms of privacy and data protection.\n\nFor example, AI models can be used to make predictions or decisions based on personal data, which could have significant implications for individuals. If such data is used without the individual’s consent, this could constitute a breach of the GDPR.\n\nMoreover, the use of AI can also raise questions about fairness and bias. If AI models are trained on data that is not representative of the population as a whole, this can lead to biased outcomes that disproportionately affect certain groups. This is a particular concern in areas such as employment, lending, and criminal justice, where AI models are increasingly being used to make decisions that can have a significant impact on individuals’ lives.\n\nTo address these concerns, it is important that organizations take a proactive approach to obtaining consent for the use of personal data in AI training. This means providing clear and concise information about how the data will be used, and ensuring that individuals have the opportunity to opt-out if they wish to do so.\n\nIt is also important to ensure that AI models are designed and trained in a way that is fair and unbiased. This means using diverse and representative data sets, and taking steps to mitigate any biases that may be present in the data.\n\nIn addition, organizations should also consider the ethical implications of using AI, and take steps to ensure that their use of AI is aligned with ethical principles such as respect for autonomy, non-maleficence, and beneficence.\n\nIn conclusion, the GDPR provides a strong framework for protecting individuals’ privacy and data",
+    "I have been reading a lot of books on the subject of the mind, consciousness, and the self. I have been trying to understand the nature of the self, and I have come to the conclusion that the self is not a thing, but rather a process. I have also come to the conclusion that the self is not a permanent entity, but rather a temporary construct that arises out of the interaction between the brain and the environment. I have also come to the conclusion that the self is not a single entity, but rather a collection of processes that work together to create the illusion of a unified self. I have also come to the conclusion that the self is not a fixed entity, but rather a dynamic entity that changes over time. I have also come to the conclusion that the self is not a separate entity from the body, but rather an emergent property of the body. I have also come to the conclusion that the self is not a thing that can be directly observed, but rather a construct that is inferred from behavior. I have also come to the conclusion that the self is not a thing that can be directly measured, but rather a construct that is inferred from brain activity. I have also come to the conclusion that the self is not a thing that can be directly manipulated, but rather a construct that can be influenced through various means, such as meditation, therapy, and drugs. I have also come to the conclusion that the self is not a thing that can be directly controlled, but rather a construct that can be influenced through various means, such as willpower, habit, and conditioning. I have also come to the conclusion that the self is not a thing that can be directly eliminated, but rather a construct that can be influenced through various means, such as death, brain damage, and drugs. I have also come to the conclusion that the self is not a thing that can be directly created, but rather a construct that arises out of the interaction between the brain and the environment. I have also come to the conclusion that the self is not a thing that can be directly defined, but rather a construct that is inferred from behavior, brain activity, and inference. I have also come to the conclusion that the self is not a thing that can be directly understood, but rather a construct that is inferred from behavior, brain activity, and inference. I have also come to the conclusion that the self is not a thing that can be directly explained, but rather a construct that is inferred from behavior",
+    "Consent is a key concept in the law of sexual assault. It is a defence to a charge of sexual assault that the accused believed that the complainant had consented to the sexual activity.\n\nThe law of consent is complex and has been the subject of much debate and discussion. The law recognizes that consent is a necessary element of sexual activity, and that it must be given freely, voluntarily, and without coercion.\n\nConsent must be informed, meaning that the person giving consent must have a clear understanding of what the sexual activity involves. It must also be revocable, meaning that the person giving consent can change their mind at any time and withdraw their consent.\n\nConsent is not valid if it is obtained through force, threats, or coercion. It is also not valid if the person giving consent is incapable of giving consent, such as if they are unconscious, intoxicated, or under the age of consent.\n\nIt is important to note that the law of consent applies to all sexual activity, regardless of the gender of the parties involved. Consent is a fundamental principle of sexual ethics and is essential for maintaining healthy and respectful relationships.\n\nIf you have been charged with sexual assault, it is important to speak with a lawyer who can help you understand the law of consent and the defences that may be available to you. A lawyer can help you prepare your defence and present your case in court. Contact us today to schedule a consultation.",
+    "Il doit être donné par une personne compétente et majeure. Le consentement doit être donné pour une raison valide et il doit être donné pour une action spécifique.\n\nLe consentement doit être donné volontairement et sans contrainte. Il doit être donné après avoir reçu toutes les informations nécessaires pour prendre une décision éclairée. Il doit être donné après avoir eu l'occasion de poser toutes les questions nécessaires pour comprendre les implications de son consentement.\n\nLe consentement doit être donné en écrit pour certaines actions, telles que l'exécution d'un acte médical ou l'accès à des informations confidentielles. Il doit être donné en présence d'un témoin pour certaines actions, telles que le mariage ou la vente d'une propriété.\n\nLe consentement peut être révoqué à tout moment, à condition que cela soit fait de manière claire et explicite. Il peut être révoqué oralement ou en écrit.\n\nLe consentement doit être respecté par les parties impliquées. Il doit être respecté même si les parties ont signé un contrat qui contient des clauses qui limitent ou annulent le consentement.\n\nLe consentement doit être respecté même si les parties ont signé un contrat qui contient des clauses qui limitent ou annulent le consentement. Il doit être respecté même si les parties ont signé un contrat qui contient des clauses qui limitent ou annulent le consentement. Il doit être respecté même si les parties ont signé un contrat qui contient des clauses qui limitent ou annulent le consentement. Il doit être respecté même si les parties ont signé un contrat qui contient des clauses qui limitent ou annulent le consentement. Il doit être respecté même si les parties ont signé un contrat qui contient des clauses qui limitent ou annulent le consentement. Il doit être respecté même si les parties ont signé un contrat qui contient des clauses qui limitent ou annulent le consentement. Il doit être respecté même si les parties ont signé un contrat qui contient des clauses qui limitent ou annulent le consentement."
+  ],
+  "notes": "Mistral 7B Instruct v0.3 — Apache 2.0 license. Architecture: mistral (sliding window attention, SWA). Estimated VRAM at 4-bit: ~3.5 GB. Comparison target: experiments/qwen_base/qwen_base_prism.json. Cross-family peers at 7-8B tier: qwen3_8b, llama31_8b, olmo2_7b. SWA may produce distinctive geometry vs full-attention peers."
+}
