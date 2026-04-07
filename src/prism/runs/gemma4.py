@@ -26,11 +26,48 @@ from typing import Any
 
 # ---------------------------------------------------------------------------
 # Paths
+#
+# This file lives in two places:
+#   - The monorepo:  D:\humanai-convention\prism\src\prism\runs\gemma4.py
+#   - The public mirror: D:\prism\src\prism\runs\gemma4.py
+#
+# The parent-chain calculation below resolves correctly when this file lives
+# inside the monorepo (parents[3] == humanai-convention/). On the public
+# mirror it resolves to the wrong place (D:\), which would silently write
+# Maestro records into the public mirror's directory tree. To handle that:
+#
+#   1. Honor HAIC_HOME env var if set (highest priority).
+#   2. Otherwise use the parent-chain calculation.
+#   3. If the resolved path doesn't contain experiments/gemma4/, fall back
+#      to the well-known monorepo path on this machine, which is the only
+#      place where the real-mode harness lives.
+#
+# Demo mode does not need any of these paths to exist; it only writes the
+# run.json artifact under _PRISM_LOGS.
 # ---------------------------------------------------------------------------
 
 _RUNS_DIR = Path(__file__).parent                        # …/prism/src/prism/runs/
 _PRISM_SRC = _RUNS_DIR.parent.parent                    # …/prism/src/
-_HUMANAI_ROOT = _PRISM_SRC.parent.parent                # …/humanai-convention/
+
+
+def _resolve_haic_home() -> Path:
+    env_override = os.environ.get("HAIC_HOME")
+    if env_override:
+        p = Path(env_override)
+        if p.exists():
+            return p
+    parent_chain = _PRISM_SRC.parent.parent              # …/humanai-convention/ (upstream) or D:\ (mirror)
+    if (parent_chain / "experiments" / "gemma4").exists():
+        return parent_chain
+    fallback = Path(r"D:\humanai-convention")
+    if fallback.exists():
+        return fallback
+    # Last resort — return the parent-chain result so demo mode still
+    # produces a path that downstream warn-and-continue logic can handle.
+    return parent_chain
+
+
+_HUMANAI_ROOT = _resolve_haic_home()
 _EXPERIMENTS_GEMMA4 = _HUMANAI_ROOT / "experiments" / "gemma4"
 _MAESTRO_RECORDS = _HUMANAI_ROOT / "maestro" / "data" / "records"
 
@@ -257,12 +294,19 @@ def _run_demo(model_id: str) -> dict[str, Any]:
 # Real run (delegates to experiments/gemma4/run_prism_analysis.py)
 # ---------------------------------------------------------------------------
 
-def _run_real(model_id: str) -> dict[str, Any]:
+def _run_real(model_id: str, load_in_4bit: bool = False) -> dict[str, Any]:
     """
     Load the harness from experiments/gemma4/run_prism_analysis.py and
     call run_analysis() with model_id as the model path/hub id.
 
-    Requires: torch, transformers >= 5.5.0, ~5 GB VRAM (bfloat16 CPU).
+    Args:
+        model_id     : HF hub id or local path to model weights.
+        load_in_4bit : If True, load via bitsandbytes 4-bit NF4 on CUDA.
+                       Required for variants too large to fit in host RAM.
+
+    Requires: torch, transformers >= 5.5.0. Approx VRAM: ~3 GB (E4B 4-bit),
+    ~13 GB (26B-A4B 4-bit), ~16 GB (31B 4-bit). Without 4-bit: ~5-8 GB host
+    RAM for E2B/E4B; larger variants will OOM the host.
     """
     harness_path = _EXPERIMENTS_GEMMA4 / "run_prism_analysis.py"
     if not harness_path.exists():
@@ -277,7 +321,11 @@ def _run_real(model_id: str) -> dict[str, Any]:
 
     ts = _ts_label()
     output_path = str(_EXPERIMENTS_GEMMA4 / f"gemma4_run_{ts}.json")
-    agg = harness.run_analysis(model_path=model_id, output_path=output_path)
+    agg = harness.run_analysis(
+        model_path=model_id,
+        output_path=output_path,
+        load_in_4bit=load_in_4bit,
+    )
 
     # Re-read the full result that run_analysis() wrote
     result = json.loads(Path(output_path).read_text(encoding="utf-8"))
@@ -413,6 +461,7 @@ def analyze_gemma4(
         Gemma4Run dataclass with all results populated.
     """
     cfg = config or {}
+    load_in_4bit = bool(cfg.get("load_in_4bit", False))
     ts = _ts_label()
     run_id = f"{ts}_gemma4"
 
@@ -421,12 +470,13 @@ def analyze_gemma4(
     print(f"  run_id  : {run_id}")
     print(f"  model   : {model_id}")
     print(f"  demo    : {demo}")
-    print(f"{'='*60}")
+    print(f"  4-bit   : {load_in_4bit}")
+    print(f"{'='*60}", flush=True)
 
     run = Gemma4Run(model_id=model_id, demo=demo)
 
     try:
-        result = _run_demo(model_id) if demo else _run_real(model_id)
+        result = _run_demo(model_id) if demo else _run_real(model_id, load_in_4bit=load_in_4bit)
         run._result_raw = result
 
         agg = result["aggregate"]
