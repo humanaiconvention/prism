@@ -503,7 +503,7 @@ def analyze_gemma4(
     run_json_path = run_dir / "run.json"
     try:
         _write_json(run_json_path, run.to_run_dict())
-        print(f"\n  [artifact] run.json → {run_json_path}")
+        print(f"\n  [artifact] run.json -> {run_json_path}")
     except Exception as exc:
         print(f"\n  [warn] Could not write run.json: {exc}")
 
@@ -513,7 +513,7 @@ def analyze_gemma4(
     maestro_path = _MAESTRO_RECORDS / f"gemma4_{ts}.json"
     try:
         _write_json(maestro_path, run.to_maestro_dict(run_id))
-        print(f"  [ledger]   maestro → {maestro_path}")
+        print(f"  [ledger]   maestro -> {maestro_path}")
     except Exception as exc:
         print(f"\n  [warn] Could not write maestro record: {exc}")
 
