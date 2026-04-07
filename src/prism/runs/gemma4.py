@@ -408,7 +408,7 @@ class Gemma4Run:
             "base_model_ref": "Gemma 4",
             "run_kind": "prism_geometry",
             "status": self.status,
-            "source_axis": "Gemma 4 (google/gemma-4-12b-it)",
+            "source_axis": f"Gemma 4 ({self.model_id})",
             "updated_at": now,
             "created_at": _iso(datetime.fromtimestamp(self.started_at, tz=timezone.utc)),
             "duration_seconds": round(self.duration_seconds, 3),
@@ -441,7 +441,7 @@ class Gemma4Run:
 # ---------------------------------------------------------------------------
 
 def analyze_gemma4(
-    model_id: str = "google/gemma-4-12b-it",
+    model_id: str = "google/gemma-4-E2B-it",
     config: dict[str, Any] | None = None,
     demo: bool = False,
 ) -> Gemma4Run:
