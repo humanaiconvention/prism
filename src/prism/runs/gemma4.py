@@ -488,19 +488,19 @@ def analyze_gemma4(
 
         run.findings = [
             f"mean_quantization_hostility={hostility:.4f} ({label})",
-            f"mean_outlier_ratio={agg['mean_outlier_ratio']:.2f}x — "
+            f"mean_outlier_ratio={agg['mean_outlier_ratio']:.2f}x: "
             + ("dominant massive-activation signature" if agg["mean_outlier_ratio"] > 10 else "within normal range"),
-            f"mean_activation_kurtosis={agg['mean_activation_kurtosis']:.4f} — "
+            f"mean_activation_kurtosis={agg['mean_activation_kurtosis']:.4f}: "
             + ("heavy-tailed per-dim magnitudes" if agg["mean_activation_kurtosis"] > 5 else "near-Gaussian"),
-            f"mean_cardinal_proximity={agg['mean_cardinal_proximity']:.4f} — "
-            + ("strong axis-alignment → quant-snaps" if agg["mean_cardinal_proximity"] > 0.7 else "moderate alignment"),
+            f"mean_cardinal_proximity={agg['mean_cardinal_proximity']:.4f}: "
+            + ("strong axis-alignment (quant-snaps)" if agg["mean_cardinal_proximity"] > 0.7 else "moderate alignment"),
             f"worst_layer=L{agg['worst_layer_idx']}  best_layer=L{agg['best_layer_idx']}",
             f"Gemma 4 architecture: {GEMMA4_ARCH_NOTES['sliding_attention_layers']} sliding-window + "
             f"{GEMMA4_ARCH_NOTES['full_attention_layers']} full-attention layers, "
             f"per-layer embeddings (dim={GEMMA4_ARCH_NOTES['per_layer_embedding_dim']})",
         ]
         if demo:
-            run.findings.insert(0, "DEMO MODE — synthetic tensors, not real model weights")
+            run.findings.insert(0, "DEMO MODE: synthetic tensors, not real model weights")
 
         run.summary = (
             f"Gemma 4 PRISM analysis {'(demo)' if demo else ''}completed. "
@@ -578,7 +578,7 @@ def analyze_gemma4(
     if run.status == "success":
         print(f"\n  FINDINGS:")
         for f in run.findings:
-            print(f"    • {f}")
+            print(f"    * {f}")
     print(f"\n{'='*60}\n")
 
     return run
