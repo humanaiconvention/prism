@@ -1,0 +1,65 @@
+{
+  "model": "google/gemma-4-E2B-it",
+  "analysis_date": "2026-04-07",
+  "full_attention_positions": [
+    5,
+    10,
+    15,
+    20,
+    25,
+    30,
+    35
+  ],
+  "hypothesis_full_attn_most_hostile": false,
+  "full_attn_mean_hostility": 0.9055,
+  "sliding_mean_hostility": 0.9168,
+  "depth_gradient": {
+    "early_L1_L12": 0.9004,
+    "middle_L13_L24": 0.9088,
+    "late_L25_L35": 0.9363
+  },
+  "anomalous_low_layers": [
+    {
+      "layer": 3,
+      "hostility": 0.7579,
+      "z_score": -2.11,
+      "type": "sliding"
+    },
+    {
+      "layer": 12,
+      "hostility": 0.7586,
+      "z_score": -2.1,
+      "type": "sliding"
+    },
+    {
+      "layer": 14,
+      "hostility": 0.6821,
+      "z_score": -3.14,
+      "type": "sliding"
+    },
+    {
+      "layer": 35,
+      "hostility": 0.7202,
+      "z_score": -2.62,
+      "type": "full_attention"
+    }
+  ],
+  "terminal_fa_collapse": {
+    "L34_hostility": 0.9748,
+    "L35_hostility": 0.7202,
+    "delta": -0.2546
+  },
+  "pre_L15_valley": {
+    "L14_hostility": 0.6821,
+    "z_score": -3.14,
+    "interpretation": "Pre-FA prep layer — 1 layer before full-attention boundary L15; deepest valley in network"
+  },
+  "findings": [
+    "PRIMARY: Depth gradient — hostility rises monotonically from early to late layers (early=0.900, mid=0.909, late=0.936)",
+    "FALSIFIED: Full-attention layers are NOT systematically more hostile (FA mean 0.906 vs sliding 0.917)",
+    "ANOMALY: L14 is a 3.14-sigma low outlier (0.682) — 1 layer before FA boundary L15; mechanism unclear",
+    "ANOMALY: L35 (terminal FA) collapses from 0.975 to 0.720 — possible learned output normalization",
+    "SECONDARY: 3 of 4 anomalous-low layers are sliding-window; FA anomaly only at terminal position",
+    "SECONDARY: Post-FA deltas are mixed — no consistent spike or relief pattern across FA boundaries"
+  ]
+}
