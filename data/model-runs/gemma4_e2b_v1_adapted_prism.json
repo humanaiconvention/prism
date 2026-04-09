@@ -1,0 +1,346 @@
+{
+  "model": "D:\\humanai-convention\\experiments\\gemma4-v1\\v1\\merged",
+  "adapter_source": "D:\\humanai-convention\\experiments\\gemma4-v1\\v1\\adapter\\best",
+  "adapter_description": "HAIC Gemma 4 E2B v1 QLoRA (r=32 alpha=64, 975 grounding examples, 2 epochs, best_loss=0.5404)",
+  "load_in_4bit": false,
+  "architecture": "gemma4",
+  "text_architecture": "gemma4_text",
+  "num_hidden_layers": 35,
+  "hidden_size": 1536,
+  "num_prompts": 20,
+  "architecture_notes": {
+    "per_layer_embeddings": true,
+    "per_layer_embedding_dim": 256,
+    "sliding_attention_layers": 28,
+    "full_attention_layers": 7,
+    "full_attention_positions": [
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      35
+    ],
+    "num_kv_shared_layers": 20
+  },
+  "aggregate": {
+    "mean_quantization_hostility": 0.9144,
+    "mean_outlier_ratio": 83.0299,
+    "mean_activation_kurtosis": 1009.3449,
+    "mean_cardinal_proximity": 0.7655,
+    "worst_layer_idx": 29,
+    "best_layer_idx": 14
+  },
+  "layer_summaries": [
+    {
+      "layer_idx": 0,
+      "mean_quantization_hostility": 0.2814,
+      "mean_outlier_ratio": 3.9901,
+      "mean_activation_kurtosis": 7.9584,
+      "mean_cardinal_proximity": 0.1331
+    },
+    {
+      "layer_idx": 1,
+      "mean_quantization_hostility": 0.8952,
+      "mean_outlier_ratio": 123.3351,
+      "mean_activation_kurtosis": 630.7946,
+      "mean_cardinal_proximity": 0.6856,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 2,
+      "mean_quantization_hostility": 0.8897,
+      "mean_outlier_ratio": 109.8522,
+      "mean_activation_kurtosis": 624.3318,
+      "mean_cardinal_proximity": 0.669,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 3,
+      "mean_quantization_hostility": 0.758,
+      "mean_outlier_ratio": 31.3966,
+      "mean_activation_kurtosis": 166.3243,
+      "mean_cardinal_proximity": 0.3943,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 4,
+      "mean_quantization_hostility": 0.9078,
+      "mean_outlier_ratio": 79.5063,
+      "mean_activation_kurtosis": 721.1829,
+      "mean_cardinal_proximity": 0.7235,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 5,
+      "mean_quantization_hostility": 0.946,
+      "mean_outlier_ratio": 106.8081,
+      "mean_activation_kurtosis": 1023.939,
+      "mean_cardinal_proximity": 0.8381,
+      "attention_type": "full_attention"
+    },
+    {
+      "layer_idx": 6,
+      "mean_quantization_hostility": 0.9531,
+      "mean_outlier_ratio": 101.0104,
+      "mean_activation_kurtosis": 1183.172,
+      "mean_cardinal_proximity": 0.8592,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 7,
+      "mean_quantization_hostility": 0.9498,
+      "mean_outlier_ratio": 94.0286,
+      "mean_activation_kurtosis": 1181.2433,
+      "mean_cardinal_proximity": 0.8493,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 8,
+      "mean_quantization_hostility": 0.9412,
+      "mean_outlier_ratio": 74.0421,
+      "mean_activation_kurtosis": 1298.1405,
+      "mean_cardinal_proximity": 0.8237,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 9,
+      "mean_quantization_hostility": 0.9601,
+      "mean_outlier_ratio": 96.5004,
+      "mean_activation_kurtosis": 1334.947,
+      "mean_cardinal_proximity": 0.8804,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 10,
+      "mean_quantization_hostility": 0.9378,
+      "mean_outlier_ratio": 70.4585,
+      "mean_activation_kurtosis": 1313.9078,
+      "mean_cardinal_proximity": 0.8135,
+      "attention_type": "full_attention"
+    },
+    {
+      "layer_idx": 11,
+      "mean_quantization_hostility": 0.9052,
+      "mean_outlier_ratio": 57.9783,
+      "mean_activation_kurtosis": 933.4443,
+      "mean_cardinal_proximity": 0.7166,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 12,
+      "mean_quantization_hostility": 0.7577,
+      "mean_outlier_ratio": 27.2397,
+      "mean_activation_kurtosis": 237.6035,
+      "mean_cardinal_proximity": 0.4328,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 13,
+      "mean_quantization_hostility": 0.9055,
+      "mean_outlier_ratio": 65.3782,
+      "mean_activation_kurtosis": 789.3547,
+      "mean_cardinal_proximity": 0.7165,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 14,
+      "mean_quantization_hostility": 0.6815,
+      "mean_outlier_ratio": 17.7265,
+      "mean_activation_kurtosis": 153.6927,
+      "mean_cardinal_proximity": 0.311,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 15,
+      "mean_quantization_hostility": 0.9516,
+      "mean_outlier_ratio": 85.7718,
+      "mean_activation_kurtosis": 1275.4726,
+      "mean_cardinal_proximity": 0.8548,
+      "attention_type": "full_attention"
+    },
+    {
+      "layer_idx": 16,
+      "mean_quantization_hostility": 0.8796,
+      "mean_outlier_ratio": 60.876,
+      "mean_activation_kurtosis": 511.6232,
+      "mean_cardinal_proximity": 0.6387,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 17,
+      "mean_quantization_hostility": 0.9299,
+      "mean_outlier_ratio": 83.2406,
+      "mean_activation_kurtosis": 908.036,
+      "mean_cardinal_proximity": 0.7897,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 18,
+      "mean_quantization_hostility": 0.9654,
+      "mean_outlier_ratio": 103.0242,
+      "mean_activation_kurtosis": 1335.1608,
+      "mean_cardinal_proximity": 0.8961,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 19,
+      "mean_quantization_hostility": 0.9782,
+      "mean_outlier_ratio": 126.9219,
+      "mean_activation_kurtosis": 1433.0733,
+      "mean_cardinal_proximity": 0.9345,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 20,
+      "mean_quantization_hostility": 0.8938,
+      "mean_outlier_ratio": 55.4849,
+      "mean_activation_kurtosis": 774.7859,
+      "mean_cardinal_proximity": 0.6814,
+      "attention_type": "full_attention"
+    },
+    {
+      "layer_idx": 21,
+      "mean_quantization_hostility": 0.9116,
+      "mean_outlier_ratio": 64.0693,
+      "mean_activation_kurtosis": 868.5851,
+      "mean_cardinal_proximity": 0.7348,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 22,
+      "mean_quantization_hostility": 0.9326,
+      "mean_outlier_ratio": 76.2506,
+      "mean_activation_kurtosis": 1046.9237,
+      "mean_cardinal_proximity": 0.7977,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 23,
+      "mean_quantization_hostility": 0.9418,
+      "mean_outlier_ratio": 83.4457,
+      "mean_activation_kurtosis": 1098.3878,
+      "mean_cardinal_proximity": 0.8254,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 24,
+      "mean_quantization_hostility": 0.9305,
+      "mean_outlier_ratio": 70.1516,
+      "mean_activation_kurtosis": 1132.3863,
+      "mean_cardinal_proximity": 0.7915,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 25,
+      "mean_quantization_hostility": 0.9139,
+      "mean_outlier_ratio": 61.4192,
+      "mean_activation_kurtosis": 979.6144,
+      "mean_cardinal_proximity": 0.7418,
+      "attention_type": "full_attention"
+    },
+    {
+      "layer_idx": 26,
+      "mean_quantization_hostility": 0.9046,
+      "mean_outlier_ratio": 56.2293,
+      "mean_activation_kurtosis": 924.8184,
+      "mean_cardinal_proximity": 0.7139,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 27,
+      "mean_quantization_hostility": 0.9344,
+      "mean_outlier_ratio": 71.7197,
+      "mean_activation_kurtosis": 1168.027,
+      "mean_cardinal_proximity": 0.8032,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 28,
+      "mean_quantization_hostility": 0.9634,
+      "mean_outlier_ratio": 98.3562,
+      "mean_activation_kurtosis": 1368.7436,
+      "mean_cardinal_proximity": 0.8903,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 29,
+      "mean_quantization_hostility": 0.9809,
+      "mean_outlier_ratio": 136.0309,
+      "mean_activation_kurtosis": 1464.1206,
+      "mean_cardinal_proximity": 0.9426,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 30,
+      "mean_quantization_hostility": 0.9741,
+      "mean_outlier_ratio": 113.6288,
+      "mean_activation_kurtosis": 1454.6766,
+      "mean_cardinal_proximity": 0.9223,
+      "attention_type": "full_attention"
+    },
+    {
+      "layer_idx": 31,
+      "mean_quantization_hostility": 0.9775,
+      "mean_outlier_ratio": 121.7134,
+      "mean_activation_kurtosis": 1467.8305,
+      "mean_cardinal_proximity": 0.9324,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 32,
+      "mean_quantization_hostility": 0.9787,
+      "mean_outlier_ratio": 124.3351,
+      "mean_activation_kurtosis": 1474.2337,
+      "mean_cardinal_proximity": 0.936,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 33,
+      "mean_quantization_hostility": 0.9769,
+      "mean_outlier_ratio": 118.9589,
+      "mean_activation_kurtosis": 1470.6053,
+      "mean_cardinal_proximity": 0.9308,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 34,
+      "mean_quantization_hostility": 0.9749,
+      "mean_outlier_ratio": 117.6944,
+      "mean_activation_kurtosis": 1432.8135,
+      "mean_cardinal_proximity": 0.9246,
+      "attention_type": "sliding_attention"
+    },
+    {
+      "layer_idx": 35,
+      "mean_quantization_hostility": 0.7202,
+      "mean_outlier_ratio": 21.4633,
+      "mean_activation_kurtosis": 145.0736,
+      "mean_cardinal_proximity": 0.3977,
+      "attention_type": "full_attention"
+    }
+  ],
+  "prompts": [
+    "The mitochondria is the powerhouse of the cell.",
+    "Water boils at 100 degrees Celsius at sea level.",
+    "I feel a deep sense of gratitude when I watch the sunrise.",
+    "The grief after losing someone you love never fully disappears.",
+    "Artificial intelligence systems trained on human-generated text inherit the perspectives, biases, and knowledge gaps present in that corpus. Grounding AI in verified, consented contributions from real people can mitigate this by anchoring representations in lived experience rather than filtered public records.",
+    "The tension between privacy and collective knowledge is one of the defining challenges of the twenty-first century. Individuals have legitimate interests in controlling their own narratives, yet society benefits enormously from open sharing of information and lived expertise.",
+    "Why?",
+    "Help.",
+    "It depends.",
+    "La inteligencia artificial debe servir a todas las personas, sin distinción.",
+    "L'expérience humaine est irréductible à des données textuelles.",
+    "人类的智慧不能被简化为数字信号。",
+    "التعاون بين البشر والذكاء الاصطناعي يتطلب الثقة والشفافية.",
+    "A diversidade de perspectivas fortalece qualquer sistema de aprendizado.",
+    "def outlier_ratio(H): return H.abs().mean(0).max() / H.abs().mean()",
+    "42, 17, 9, 3.14159, 2.71828, 1.41421, 0.577",
+    "No person should be coerced into providing their data for AI training.",
+    "I am not sure whether what I experience constitutes genuine understanding.",
+    "Consent must be informed, revocable, and freely given.",
+    "Le consentement doit être éclairé, révocable et librement accordé."
+  ]
+}
