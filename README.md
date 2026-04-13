@@ -2,307 +2,274 @@
 
 **Phase-based Research & Interpretability Spectral Microscope**
 
-Mechanistic interpretability and inline spectral telemetry for autoregressive language models. PRISM is a 14-module toolkit for dissecting what transformer-family models are doing, layer by layer, head by head, token by token — with a high-level scanning API and a full suite of causal, geometric, and evaluation tools underneath.
+[![PyPI](https://img.shields.io/pypi/v/humanaiconvention-prism)](https://pypi.org/project/humanaiconvention-prism/)
+[![Python](https://img.shields.io/pypi/pyversions/humanaiconvention-prism)](https://pypi.org/project/humanaiconvention-prism/)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
+
+PRISM is a model-agnostic mechanistic interpretability toolkit for transformer-family language models.  It measures **activation geometry** — the structural properties of hidden-state tensors that predict quantisation error, representation collapse, and alignment shifts — and exposes a 14-module suite of causal, spectral, and evaluation tools for deeper analysis.
 
 ---
 
-## Capabilities
+## Why Activation Geometry?
 
-### ⚡ One-Command Model Scan
+When a language model is fine-tuned, its weights change.  What changes in the *activations* is harder to see — and more revealing.  PRISM's geometry metrics, inspired by [TurboQuant (Google, ICLR 2026)](https://arxiv.org/abs/2406.02544), measure four per-layer statistics that together capture how "hostile" a layer's activations are to low-bit quantisation:
 
-```python
-from prism import SpectralMicroscope
+| Metric | What it measures | Danger sign |
+|---|---|---|
+| `outlier_ratio` | max dim magnitude / mean dim magnitude | > 10 |
+| `activation_kurtosis` | heavy-tail-ness of per-dim magnitudes | large positive |
+| `cardinal_proximity` | how axis-aligned unit vectors are | near 1.0 |
+| `quantization_hostility` | composite score in [0, 1] | > 0.70 |
 
-microscope = SpectralMicroscope()
-report = microscope.full_scan(model, tokenizer, prompt="The capital of France is")
-# Returns: logit lens trajectory, rank restoration profile,
-# static circuit SVD, attention entropy heatmap, positional sensitivity.
+A high `quantization_hostility` score means the layer will lose significant information when quantised to 4- or 8-bit precision.  Tracking this score **across training runs** reveals whether fine-tuning is moving a model toward or away from a quantisation-friendly (and typically more robust) geometry.
+
+---
+
+## Quickstart
+
+```bash
+pip install humanaiconvention-prism
 ```
 
+**Measure the quantisation hostility of any model in 3 lines:**
+
+```python
+from prism.geometry import scan_model_geometry
+
+results = scan_model_geometry("google/gemma-4-e2b-it")
+print(results["mean_quantization_hostility"])   # e.g. 0.914
+```
+
+That is the complete API for the primary use case.  `scan_model_geometry` loads the model from the Hugging Face Hub, runs a single forward pass, and returns per-layer geometry metrics — no hook management, no manual tokenisation, no dtype juggling.
+
 ---
 
-### 1. Telemetry & Snapshot Schemas (`prism.telemetry`)
+## Case Study: Gemma 4 E2B Fine-Tuning Geometry
 
-Structured capture and verification of internal model state.
+The result that motivated PRISM's public release came from the **Gemma4Good Hackathon (April 2026)**, where the HumanAI Convention team fine-tuned Gemma 4 E2B using QLoRA on curated semantic-grounding interview data.
 
-- **PRISM Adapters** — native integration points for state snapshotting and analysis
-- **Snapshot Logic** — extract and validate `EntropySnapshot` geometry configurations
-- **Settlement Proofs** — compute `EntropyDeltaProof` and `GeometricHealthScore` for verifiable telemetry
+PRISM tracked `quantization_hostility` at three checkpoints:
 
-### 2. Causal Intervention Suite (`prism.causal`)
+| Checkpoint | Mean hostility | SGT score | Security failures |
+|---|---|---|---|
+| **Gemma 4 E2B baseline** | 0.9146 | — | — |
+| **HAIC v1 adapter** (BEAST, untagged data) | 0.9144 | 6.20 / 10 | 0 |
+| **HAIC v2 adapter** (A100, SGT-formatted data) | **0.7398** | **8.56 / 10** | **0** |
 
-Surgical tools for causal attribution and hypothesis testing.
+The v2 adapter achieved a **−0.175 reduction in mean quantisation hostility** — a 19% shift — while simultaneously producing the strongest SGT behavioural score in the HAIC model family.  This is not coincidence.
 
-- **Activation Patching** — swap activations at any residual position to isolate causal components; supports iterative test schedules
-- **Attribution Patching (AtP)** — gradient-based approximation for fast causal screening without full forward-pass overhead
-- **Knockout Circuits** — head-level ablation combined with spectral readouts
+The geometry shift tracks the training-data quality change precisely:
 
-### 3. Automated Circuit Discovery (`prism.discovery`)
+- **v1** was trained on `grounding_mix_v3i.jsonl` — 975 examples with no `[PIVOT:]` format tags.  The LoRA adapted the model's style but never saw the target output format.  Hostility: unchanged (0.9144, Δ = −0.0002 — noise level).
+- **v2** was trained on `grounding_gemma4_v2.jsonl` — 500 SGT-formatted examples with 100% `[PIVOT:]` coverage, three training windows per conversation (T2 + T4 + T6 loss), on an A100.  The geometry *shifted*.
 
-End-to-end extraction of functional subnetworks.
+**Interpretation under C(t):** LoRA adapters generally navigate the activation manifold rather than reshape it — which is why v1 showed geometry-stable Δ ≈ 0.  The v2 geometry shift from 0.9146 to 0.7398 indicates that the higher-quality, format-consistent training data moved the adapter outside the geometry-neutral zone.  The model is not just stylistically different; its residual-stream structure has measurably changed in a direction that reduces quantisation sensitivity and — empirically — correlates with improved task performance and maintained security.
 
-- **CircuitScout** — automated extraction of named circuits (e.g. IOI name-mover circuits)
-- **Graph Export** — subnetwork connectivity exported to standard graph formats
-
-### 4. Evaluation & Grounding Metrics (`prism.eval`)
-
-Behavioral and geometric evaluation under distribution shift and across recursive training generations.
-
-- **Semantic Grounding Metrics** — precision, recall, F1 for conceptual preservation (`GroundingMetrics`); both exact-match and dense-embedding modes
-- **Calibration & Diversity** — Expected Calibration Error (ECE) and n-gram / self-BLEU diversity (`CalibrationMetrics`, `DiversityMetrics`)
-- **Early Warning Detection** — detect silent semantic drift before perplexity rises; configurable threshold sensitivity (`EarlyWarningAnalyzer`, `EarlyWarningDetector`)
-- **Geometric Drift Extension** — augment behavioral trajectories with PRISM spectral signals (`spectral_entropy`, `effective_dimension`) to catch mechanistic precursors early
-- **Temporal Collapse Analysis** — compute T_OOD / T_PPL / Δt and classify failure regimes (accuracy-first, perplexity-first, synchronized, no-collapse) across recursive training generations (`TemporalAnalyzer`)
-
-### 5. Hessian & Loss Landscape Diagnostics (`prism.geometry.hessian`)
-
-Characterize the curvature of the loss landscape around a model checkpoint.
-
-- **Failure Mode Classification** — detect distribution shift risk, hallucination susceptibility, and adversarial brittleness
-- **Landscape Metrics** — hardware-aware extraction of spectral sharpness, condition numbers, and negative saddle points
-
-### 6. Attention Circuit Analysis (`prism.attention`)
-
-Decompose attention heads into functional roles via weight-space and dynamic analysis.
-
-- **Induction Head Detection** — automated scoring of in-context learning circuits
-- **Weight-Space SVD** — singular value analysis of $W_O W_V$ (copying) and $W_Q^T W_K$ (matching)
-- **Attention Entropy Maps** — per-head aggregation heatmaps from live inference
-
-### 7. Vocabulary Projection & Lens Suite (`prism.lens`)
-
-Track semantic crystallization as information propagates through depth.
-
-- **Logit Lens** — direct $W_U$ projection of hidden states at every layer
-- **Tuned Lens** — learned affine translators for cleaner early-layer decoding
-- **Prediction Entropy** — uncertainty trajectory across model depth
-
-### 8. Linear Probing & Steering (`prism.probing`)
-
-Identify and manipulate linear structure in the residual stream.
-
-- **Concept Probing** — logistic regression probes to identify linear representation directions
-- **Causal Steering** — extract Causal Inner Product (CIP) vectors for behavioral control
-- **CKA Drift** — Centered Kernel Alignment tracking for geometric representation drift
-
-### 9. Sparse Feature Decomposition (`prism.sae`)
-
-Decompose polysemantic neurons into interpretable sparse features.
-
-- **SAE Training** — TopK Sparse Autoencoders trained on arbitrary hidden states
-- **Feature Attribution** — project learned sparse features back to vocabulary concepts
-
-### 10. FFN / MLP Mechanistic Decomposition (`prism.mlp`)
-
-Characterize how FFN layers process and transform representations.
-
-- **Rank Restoration Profile** — quantify how MLP layers restore effective rank after attention compression
-- **Key-Value Neuron Mapping** — map neurons to the tokens that most activate them
-
-### 11. Hybrid & Cross-Architecture Diagnostics (`prism.arch`)
-
-Tools built for non-standard architectures including linear attention and recurrent hybrids.
-
-- **Recurrent Attractors** — track Principal Angles in GLA/Mamba-style recurrent state spaces
-- **Positional Sensitivity** — measure drift and rank collapse under RoPE/ALiBi ablation
-- **Linear vs. Softmax Fingerprinting** — compare spectral signatures across hybrid mixer types
-
-### 12. Phase Synchronization & Spectral Coherence (`prism.phase`)
-
-Treat hidden states as signals and measure their phase structure.
-
-- **Hilbert Phase Extraction** — instantaneous phase angles along the token sequence
-- **Cross-Layer PLV** — Phase Locking Values to identify coherent multi-layer processing
-- **FFT Telemetry** — dominant spatial frequency identification in activation space
-- **Phase Clustering** — circular variance to detect semantic grouping moments
-
-### 13. Entropy Reduction Dynamics (`prism.entropy`)
-
-Profile the model's decision process as it commits to a prediction.
-
-- **Expansion vs. Pruning Profiles** — track $\Delta H$ to identify computational phases
-- **Rényi Entropy Sweeps** — map probability mass consolidation with tunable sensitivity
-- **Spectral–Semantic Coupling** — correlate geometric rank compression with prediction certainty
-- **Entropy Phase Transitions** — detect commitment points via piecewise linear fitting
-
-### 14. Viability Constraints & Geometric Validity (`prism.geometry`)
-
-Assess the health and structure of the representation manifold.
-
-- **Effective Dimension Viability Curve** — normalized geometric health scores across depth
-- **ID Hunchback Profile** — characterize the rise and fall of intrinsic dimensionality
-- **Representational Noise Sensitivity** — robustness margin via calibrated noise injection
-- **Fisher Information Curvature** — representation manifold tightness and causal bottlenecks
+**This is the kind of result that PRISM was built to surface.**  Without geometry tracking, the v1 and v2 adapters look similar on loss curves.  With it, the bifurcation point is obvious.
 
 ---
 
 ## Installation
 
 ```bash
+# Standard (CPU / CUDA)
+pip install humanaiconvention-prism
+
+# With BitsAndBytes for 4-bit / 8-bit quantised models
+pip install 'humanaiconvention-prism[quantized]'
+
+# With notebook / visualisation tools
+pip install 'humanaiconvention-prism[notebook]'
+
+# Full install
+pip install 'humanaiconvention-prism[all]'
+```
+
+Or from source:
+
+```bash
 git clone https://github.com/humanaiconvention/prism.git
-cd prism
-pip install -e .
-```
-
-### Notebook environment (optional)
-
-```bash
-pip install -e ".[notebook]"
-# or: pip install -r requirements.txt
-```
-
-### Dev / test environment
-
-```bash
-pip install -e ".[dev]"
+cd prism && pip install -e .
 ```
 
 ---
 
-## Quickstart
+## API Reference
 
-PRISM works with any Hugging Face `AutoModelForCausalLM` that supports `output_hidden_states=True`.
-
-### Full mechanistic scan
+### `scan_model_geometry` — model-level scan
 
 ```python
-import torch
+from prism.geometry import scan_model_geometry
+
+# From a HF Hub model id (auto-loads model + tokenizer)
+results = scan_model_geometry("google/gemma-4-e2b-it")
+
+# With a pre-loaded model
 from transformers import AutoModelForCausalLM, AutoTokenizer
+model = AutoModelForCausalLM.from_pretrained("mistralai/Mistral-7B-v0.1")
+tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1")
+results = scan_model_geometry(model, tokenizer=tokenizer)
+
+# 4-bit quantised (requires bitsandbytes + accelerate)
+results = scan_model_geometry("google/gemma-4-e2b-it", load_in_4bit=True)
+```
+
+**Return value** — a flat dict:
+
+```python
+{
+    "model_name":                 str,    # identifier
+    "prompt":                     str,    # probe text used
+    "n_layers":                   int,    # transformer block count
+    "layers":                     list,   # per-layer dicts (see below)
+    "mean_quantization_hostility": float, # mean across all layers
+    "worst_layer_idx":            int,
+    "best_layer_idx":             int,
+    "worst_layer_hostility":      float,
+    "best_layer_hostility":       float,
+    "n_hostile_layers":           int,    # layers with hostility > 0.70
+}
+
+# Each element of "layers":
+{
+    "layer_idx":             int,
+    "outlier_ratio":         float,
+    "activation_kurtosis":   float,
+    "cardinal_proximity":    float,
+    "quantization_hostility": float,
+}
+```
+
+---
+
+### `outlier_geometry` — single-layer, tensor input
+
+```python
+from prism.geometry import outlier_geometry
+import torch
+
+# hidden states from a single layer: (seq_len, hidden_dim)
+H = torch.randn(64, 2048)
+metrics = outlier_geometry(H)
+# {'outlier_ratio': ..., 'activation_kurtosis': ...,
+#  'cardinal_proximity': ..., 'quantization_hostility': ...}
+```
+
+Accepts both `torch.Tensor` and `numpy.ndarray`.
+
+---
+
+### `outlier_geometry_numpy` — pure-NumPy fallback
+
+For environments where PyTorch is not available (lightweight CI, pre-computed
+activation files, etc.):
+
+```python
+from prism.geometry import outlier_geometry_numpy
+import numpy as np
+
+H = np.load("layer_12_hidden_states.npy")   # (seq_len, hidden_dim)
+metrics = outlier_geometry_numpy(H)
+```
+
+---
+
+### Tracking geometry across training
+
+```python
+from prism.geometry import scan_model_geometry
+
+checkpoints = [
+    "path/to/checkpoint-500",
+    "path/to/checkpoint-1000",
+    "path/to/checkpoint-2000",
+]
+
+for ckpt in checkpoints:
+    r = scan_model_geometry(ckpt)
+    print(f"{ckpt}  hostility={r['mean_quantization_hostility']:.4f}  "
+          f"hostile_layers={r['n_hostile_layers']}/{r['n_layers']}")
+```
+
+---
+
+## Full Toolkit
+
+PRISM is a 14-module library.  The geometry scanner is its primary entry point, but the full suite is available for deeper mechanistic analysis.
+
+```python
 from prism import SpectralMicroscope
 
-model_name = "HuggingFaceTB/SmolLM2-135M-Instruct"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    device_map="auto",
-    attn_implementation="eager",   # required for hidden state hooks on some architectures
-    torch_dtype=torch.float32,     # recommended for stable spectral decomposition
-)
-
 microscope = SpectralMicroscope()
-report = microscope.full_scan(
-    model, tokenizer,
-    prompt="The capital of France is",
-    target_layer=None,             # defaults to middle layer
-)
-
-# report keys: static_circuits, logit_lens, rank_profile,
-#              attention_heatmap, positional_sensitivity, provenance
-print(report["logit_lens"]["top_predictions"])
-print(report["rank_profile"])
+report = microscope.full_scan(model, tokenizer, prompt="The capital of France is")
+# Returns: logit_lens, rank_profile, static_circuits,
+#          attention_heatmap, positional_sensitivity, provenance
 ```
 
-### Streaming telemetry
-
-```python
-microscope = SpectralMicroscope(max_tokens=64, window_size=32, streaming_cov_alpha=0.95)
-
-result = microscope.generate_and_analyze(
-    model=model,
-    tokenizer=tokenizer,
-    prompt="Explain what a black hole is in three simple sentences.",
-    max_new_tokens=50,
-)
-```
-
-### Individual modules
-
-```python
-from prism import (
-    ActivationPatcher,        # causal patching
-    AttentionAnalyzer,        # attention SVD + entropy
-    LogitLens, TunedLens,     # vocabulary projection
-    ConceptProber,            # linear probing
-    SAETrainer,               # sparse autoencoders
-    MLPAnalyzer,              # rank restoration
-    PhaseAnalyzer,            # phase coherence
-    EntropyDynamics,          # entropy profiles
-    GeometricViability,       # manifold health
-    HybridDiagnostics,        # recurrent / hybrid arch
-)
-```
+| Module | Import | Capability |
+|---|---|---|
+| Geometry scanner | `prism.geometry` | Quantisation hostility profiling |
+| Causal patching | `prism.causal` | Activation swap & attribution patching |
+| Logit / Tuned Lens | `prism.lens` | Vocabulary projection at every layer |
+| Attention circuits | `prism.attention` | Induction head detection, OV/QK SVD |
+| Linear probing | `prism.probing` | Concept directions, CKA drift |
+| Sparse features | `prism.sae` | TopK SAE training & feature attribution |
+| MLP decomposition | `prism.mlp` | Rank restoration, neuron mapping |
+| Hybrid diagnostics | `prism.arch` | Recurrent / linear-attention architectures |
+| Phase coherence | `prism.phase` | Hilbert phase, PLV, FFT spectral |
+| Entropy dynamics | `prism.entropy` | Shannon / Rényi entropy profiles |
+| Geometric viability | `prism.geometry` | Intrinsic dimensionality, Fisher curvature |
+| Circuit discovery | `prism.discovery` | Automated circuit extraction |
+| Evaluation | `prism.eval` | Calibration, drift, temporal collapse |
+| Telemetry schemas | `prism.telemetry` | Verifiable snapshot & delta proofs |
 
 ---
 
-## Runtime notes
+## Architecture Compatibility
 
-1. **Attention implementation** — use `attn_implementation="eager"` if flash attention drops hidden state hooks.
-2. **Numeric stability** — spectral decomposition is sensitive to precision; `float32` on CUDA avoids early-step NaNs.
-3. **Memory** — telemetry stores layer-wise activations; reduce batch size relative to a standard generation workload.
+PRISM's architecture adapter resolves transformer components without hard-coding
+any single layout.  Tested families include:
+
+LLaMA · Gemma (2, 3, 4, E2B, E4B) · Qwen2 / Qwen3 · Mistral · Phi · GPT-2 / GPT-NeoX · Pythia · SmolLM2 · OLMo2 · Mamba / GLA / FoX hybrids · T5 · mT5
+
+Any model that supports `output_hidden_states=True` works with `scan_model_geometry`.
 
 ---
 
-## Genesis-152M Replication Suite
+## Runtime Notes
 
-`experiments/genesis/` is a complete mechanistic interpretability research suite run on [guiferrarib/genesis-152m-instruct](https://huggingface.co/guiferrarib/genesis-152m-instruct), a 152M-parameter hybrid GLA/FoX model. It covers Phases 0A through 12F and serves as a worked example of PRISM applied to a real architecture.
+1. **Precision** — `float32` avoids spectral-decomposition instabilities on CUDA.  BitsAndBytes quantised activations are automatically cast to `float32` for metric computation.
+2. **Memory** — a single forward pass stores all layer hidden states simultaneously.  For very large models, reduce sequence length via the `prompt` parameter.
+3. **Attention hooks** — use `attn_implementation="eager"` if flash-attention drops hidden-state hooks on your architecture.
 
-**Selected findings:**
+---
 
-| Finding | Result |
-|---|---|
-| True effective rank at final layer | 185.5 / 576 (32.2%) — prior short-sequence measurements were artifacts |
-| Compression bottleneck | Mixer (GLA/FoX), not residual add; ~4× ER oscillation per block |
-| FFN role | Major rank restorer (+124 ER at L15) |
-| GLA attractor convergence | Recurrent subspace locks at 46.2° relative to T=0 by step t=27 |
-| Steering corridor | L7–L11 FoX band is the most responsive; OOD transfer is family-sensitive and fragile |
-| L15 Lexical Crossover | Vocabulary ER collapses from >100 to ~28 words at the causal geometric bottleneck |
-| Period-4 oscillation | Welford ER tracking and FFT both show a power spike at f=0.25, matching GLA/GLA/GLA/FoX layout |
-| Circuit Closure (Phase 12) | L11 W_o is a high-gain output stage; the corridor is a non-specific answer-adjacent access interface |
+## Genesis-152M Research Suite
+
+`experiments/genesis/` is a complete 12-phase mechanistic interpretability research run on [guiferrarib/genesis-152m-instruct](https://huggingface.co/guiferrarib/genesis-152m-instruct), a 152M-parameter hybrid GLA/FoX model.  It serves as a worked example of PRISM applied end-to-end.
 
 ```bash
-# List all phases
-python experiments/genesis/go.py --list
-
-# Inspect a phase
-python experiments/genesis/go.py --info 10A
-
-# Run a phase
-python experiments/genesis/go.py 10A
+python experiments/genesis/go.py --list   # list all phases
+python experiments/genesis/go.py 10A      # run a phase
 ```
-
-See `experiments/genesis/README.md` for the full phase-by-phase account.
 
 ---
 
 ## Testing
 
-PRISM ships a comprehensive pytest suite covering all 14 modules:
-
-| Module group | Test file(s) |
-|---|---|
-| Core telemetry schemas | `test_telemetry.py` |
-| Adapter coverage | `test_adapter_coverage.py` |
-| Attention circuits | `test_attention.py` |
-| Causal patching | `test_causal.py` |
-| Circuit discovery | `test_circuit_discovery.py` |
-| Geometry / Hessian | `test_integration_advanced_geometry.py`, `test_hessian_diagnostics.py` |
-| Logit / Tuned lens | `test_lens.py` |
-| MLP decomposition | `test_mlp.py` |
-| Probing & steering | `test_probing.py` |
-| SAE features | `test_sae.py` |
-| Evaluation metrics | `test_eval_metrics.py`, `test_eval_calibration.py` |
-| Drift & early warning | `test_eval_early_warning.py`, `test_eval_drift_metrics.py` |
-| Temporal collapse | `test_eval_temporal.py` |
-| Hybrid / arch | `test_hybrid.py` |
-| Hardware-aware analysis | `test_prism_analysis_hardware.py` |
-| Integration / master scan | `test_integration_master_scan.py`, `test_integration_advanced_diagnostics.py` |
-| Math proofs | `test_math_*.py` (10 files) |
-
 ```bash
-pytest
+pytest                        # full suite
+pytest tests/test_geometry*   # geometry module only
+pytest --cov=prism            # with coverage
 ```
-
----
-
-## Model Run Logs
-
-For bounded model analyses and comparison sweeps, use `scripts/run_model_analysis.py`. It writes a canonical PRISM log bundle under `logs/model-runs/` — one folder per run, containing the summary, findings, lessons, phase logs, and mirrored artifacts. Use `MODEL_RUN_TEMPLATE.md` as the standard format for recording findings.
 
 ---
 
 ## Contributing
 
-Contributions to expand telemetry capabilities, add new architectures, or introduce new analytical metrics are welcome. All new modules must be covered by tests in `tests/`. See `CONTRIBUTING.md` for guidance.
+Contributions expanding architecture coverage, adding new geometry metrics, or
+improving the test suite are welcome.  All new modules must include tests under
+`tests/`.  See `CONTRIBUTING.md` for guidelines.
 
 ---
 

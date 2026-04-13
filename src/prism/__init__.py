@@ -1,10 +1,25 @@
-"""Spectral Microscope: Telemetry and causal intervention for hybrid models.
+"""PRISM — Phase-based Research & Interpretability Spectral Microscope.
 
-This library provides utilities to track spectral entropy, effective dimension,
-and layer-level attention metrics during inline text generation.
+A model-agnostic mechanistic interpretability toolkit for transformer-family
+language models.  Core capabilities:
+
+* **Quantisation hostility profiling** — measure per-layer activation geometry
+  that predicts KV-cache quantisation error (3 lines of code).
+* **Full mechanistic scan** — logit lens, attention SVD, rank-restoration
+  profile, causal patching, and 14 further analysis modules.
+* **Verifiable telemetry** — structured snapshot schemas with delta proofs.
+
+Quick start::
+
+    from prism.geometry import scan_model_geometry
+
+    results = scan_model_geometry("google/gemma-4-e2b-it")
+    print(results["mean_quantization_hostility"])   # e.g. 0.914
+
+See https://github.com/humanaiconvention/prism for documentation.
 """
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 from .analysis import (
     compute_spectral_metrics,
@@ -44,7 +59,9 @@ from .phase.coherence import PhaseAnalyzer
 # Entropy
 from .entropy.lens import EntropyDynamics
 
-# Geometry
+# Geometry — core quantisation-hostility API (top-level for discoverability)
+from .geometry.scanner import scan_model_geometry
+from .geometry.core import outlier_geometry, outlier_geometry_numpy
 from .geometry.viability import GeometricViability
 
 # Telemetry
@@ -66,6 +83,11 @@ from .telemetry.schemas import (
 
 __all__ = [
     "__version__",
+    # geometry / quantisation hostility (primary open-source surface)
+    "scan_model_geometry",
+    "outlier_geometry",
+    "outlier_geometry_numpy",
+    # spectral analysis
     "compute_spectral_metrics",
     "compute_shannon_effective_rank",
     "compute_top_eigenvalues",

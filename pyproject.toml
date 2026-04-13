@@ -3,15 +3,33 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "spectral-microscope"
-version = "0.2.0"
-description = "Inline spectral telemetry for autoregressive language-model generation."
+name = "humanaiconvention-prism"
+version = "1.0.0"
+description = "Model-agnostic activation geometry and mechanistic interpretability toolkit for transformer language models."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
   { name = "HumanAI Convention contributors" }
 ]
 license = { file = "LICENSE" }
+keywords = [
+  "mechanistic interpretability",
+  "transformers",
+  "activation geometry",
+  "quantization",
+  "language models",
+  "deep learning",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
   "torch>=2.1.0",
   "transformers>=4.40.0",
@@ -19,20 +37,44 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Quantised model support (BitsAndBytes 4-bit / 8-bit)
+quantized = [
+  "bitsandbytes>=0.41.0",
+  "accelerate>=0.21.0",
+]
+# Notebook / visualisation environment
 notebook = [
   "pandas>=2.0.0",
   "matplotlib>=3.7.0",
   "jupyter>=1.0.0",
 ]
+# Development + test environment
+dev = [
+  "pytest>=7.4.0",
+  "pytest-cov>=4.1.0",
+  "ruff>=0.4.0",
+]
+# Everything
+all = [
+  "humanaiconvention-prism[quantized,notebook,dev]",
+]
 
 [project.urls]
-Homepage = "https://github.com/humanaiconvention/spectral-microscope"
-Repository = "https://github.com/humanaiconvention/spectral-microscope"
-Issues = "https://github.com/humanaiconvention/spectral-microscope/issues"
+Homepage   = "https://github.com/humanaiconvention/prism"
+Repository = "https://github.com/humanaiconvention/prism"
+Issues     = "https://github.com/humanaiconvention/prism/issues"
+Changelog  = "https://github.com/humanaiconvention/prism/releases"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths    = ["tests"]
 norecursedirs = ["experiments", "logs", ".pytest_cache"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
