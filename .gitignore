@@ -42,3 +42,11 @@ weights/
 *.npz
 *.csv
 !experiments/genesis/prompts/*.csv
+
+# SGT runner intermediate dirs (HF Trainer scratch)
+experiments/sgt/runs/**/_tmp_*/
+experiments/sgt/runs/**/checkpoint-*/
+# But keep per-run JSONs and analysis outputs
+!experiments/sgt/runs/**/*.json
+!experiments/sgt/analysis/**/*.json
+!experiments/sgt/analysis/**/*.png
