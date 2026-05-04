@@ -159,6 +159,10 @@ def fine_tune(model, tok, ds: Dataset, epochs: int, batch_size: int, work_dir: s
         gradient_checkpointing_kwargs={"use_reentrant": False},
     )
     Trainer(model=model, args=args, train_dataset=tok_ds).train()
+    # gradient_checkpointing forces use_cache=False on the model config; restore
+    # it for subsequent eval and synthetic-generation calls (HF Trainer does not
+    # always restore, and KV cache is required for generate() to run at sane speed).
+    model.config.use_cache = True
     return model
 
 # ---------- main loop ----------
