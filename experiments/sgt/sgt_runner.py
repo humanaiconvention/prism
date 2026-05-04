@@ -172,13 +172,24 @@ def fine_tune(model, tok, ds: Dataset, epochs: int, batch_size: int, work_dir: s
         return tok(ex["text"], truncation=True, max_length=512, padding="max_length")
     tok_ds = ds.map(tokenize, batched=True, remove_columns=ds.column_names)
     tok_ds = tok_ds.map(lambda e: {**e, "labels": e["input_ids"]})
+    # Effective batch size = batch_size (RunCfg default 8). Split into per-device
+    # microbatch + gradient accumulation so the activations + logits tensor fit
+    # in T4's ~14.5 GB usable VRAM. On L4 (24 GB) this is also fine — gradient
+    # accumulation produces identical gradients, just stepped in smaller chunks.
+    if batch_size >= 8:
+        per_device_bs, grad_accum = batch_size // 2, 2
+    else:
+        per_device_bs, grad_accum = batch_size, 1
     args = TrainingArguments(
         output_dir=work_dir, num_train_epochs=epochs,
-        per_device_train_batch_size=batch_size, logging_steps=100,
+        per_device_train_batch_size=per_device_bs,
+        gradient_accumulation_steps=grad_accum,
+        logging_steps=100,
         save_strategy="no", report_to=[], seed=42, fp16=torch.cuda.is_available(),
         # padding="max_length" + batch=8 + vocab=152k logits OOMs on L4 24GB at fp32
-        # convert. Gradient checkpointing trades ~25% wall time for ~50% activation
-        # memory; equivalent gradients, no scientific change.
+        # convert; with batch=4+grad_accum=2 the per-step logits tensor is ~1.2 GB
+        # instead of ~2.4 GB. Gradient checkpointing on top trades ~25% wall time
+        # for ~50% activation memory; equivalent gradients, no scientific change.
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
     )
