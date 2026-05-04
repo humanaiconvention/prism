@@ -19,6 +19,13 @@ import argparse, json, os, random, time
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
+# Single-GPU by default. On multi-GPU hosts (e.g., Kaggle T4×2) HF Trainer
+# auto-wraps the model in nn.DataParallel and the scatter step fails with
+# Qwen2.5 + gradient_checkpointing on small batches. Default to CUDA:0;
+# users who want multi-GPU can override CUDA_VISIBLE_DEVICES explicitly
+# before invoking the runner.
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "0")
+
 import numpy as np
 import torch
 from datasets import load_dataset, Dataset, concatenate_datasets
