@@ -152,6 +152,11 @@ def fine_tune(model, tok, ds: Dataset, epochs: int, batch_size: int, work_dir: s
         output_dir=work_dir, num_train_epochs=epochs,
         per_device_train_batch_size=batch_size, logging_steps=100,
         save_strategy="no", report_to=[], seed=42, fp16=torch.cuda.is_available(),
+        # padding="max_length" + batch=8 + vocab=152k logits OOMs on L4 24GB at fp32
+        # convert. Gradient checkpointing trades ~25% wall time for ~50% activation
+        # memory; equivalent gradients, no scientific change.
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
     )
     Trainer(model=model, args=args, train_dataset=tok_ds).train()
     return model
