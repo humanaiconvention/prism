@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-11
+
+### Added
+- **`prism.provenance` submodule** — wraps Cisco's Model Provenance Kit
+  (Apache-2.0, https://github.com/cisco-ai-defense/model-provenance-kit,
+  released 2026-05-04) to surface model lineage detection alongside
+  PRISM's geometry/NLA scans.
+  - `compare_models(candidate, parent)` — pairwise lineage comparison.
+  - `scan_model_provenance(model, top_k=...)` — database lookup against
+    the ~150-model MPK reference catalogue.
+  - `ProvenanceResult` / `ProvenanceMatch` / `ProvenanceSignals` typed
+    dataclasses.  Every result carries `not_cryptographic=True`, which
+    propagates verbatim into the audit-dict serialisation so consumers
+    cannot silently drop Cisco's "strong evidence, not absolute proof"
+    caveat.
+  - `MPKBackend` adapter with lazy import of `provenancekit` and a
+    pluggable `scanner=` argument for tests.
+  - `mock_compare` / `mock_scan` deterministic offline backend — no MPK
+    install or 908 MB dataset download required.
+- `docs/PROVENANCE.md` — design doc covering the five MPK signals
+  (EAS/END/NLF/LEP/WVC), the 0.70 threshold calibration, when to use
+  provenance vs geometry vs NLA, failure modes, and the HAIC connection
+  (PRISM model-side primitive + HAIC data-side Merkle receipts).
+- 16 new tests in `tests/test_provenance.py`.  No network, no MPK install.
+
+### Changed
+- README "Model Provenance" section + toolkit table row.
+- `pyproject.toml` version bumped to `1.2.0`.
+
+### Notes
+- `provenancekit` is an *optional* runtime dependency.  PRISM does not
+  ship it; users who want the real backend run `pip install provenancekit`.
+- MPK is v1.0.0 (one week old at this release).  Treat its ground-truth
+  claims with appropriate deference until it has had adversarial
+  scrutiny.
+
 ## [1.1.0] - 2026-05-11
 
 ### Added

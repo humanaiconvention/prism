@@ -193,6 +193,14 @@ for ckpt in checkpoints:
 
 ---
 
+## Model Provenance
+
+PRISM 1.2.0 adds a `prism.provenance` submodule that wraps [Cisco's Model Provenance Kit](https://github.com/cisco-ai-defense/model-provenance-kit) (Apache-2.0, released 2026-05-04).  Given a model, `compare_models(candidate, claimed_parent)` and `scan_model_provenance(model)` answer "does this artifact actually descend from what its producer says?" using five weight-level statistical signals (EAS, END, NLF, LEP, WVC).  See [`docs/PROVENANCE.md`](docs/PROVENANCE.md) for the technique, threshold calibration, and the limitations Cisco discloses (the output is statistical evidence, not a cryptographic signature, and cannot distinguish "copied weights" from "trained from the same template" when architectures are identical).
+
+The submodule keeps MPK as an *optional* dependency — install `provenancekit` only when you want the real backend; the deterministic mock in `prism.provenance.mock_compare` / `mock_scan` is the default for tests and offline demos.  Every result carries a `not_cryptographic=True` flag that propagates into the audit-dict serialisation so downstream consumers can't silently drop the caveat.
+
+---
+
 ## Natural Language Autoencoders
 
 PRISM's geometry metrics describe the *structure* of hidden states.  In May 2026 [Anthropic published Natural Language Autoencoders (NLAs)](https://transformer-circuits.pub/2026/nla/index.html), a complementary technique that describes the *semantics* of those same hidden states — a learned decoder converts an activation token into a natural-language explanation of what the layer appears to be representing.  PRISM 1.1.0 adds a `prism.nla` submodule that bundles the public Anthropic-style checkpoints (released by [kitft](https://github.com/kitft/natural_language_autoencoders) under Apache-2.0 for Qwen2.5-7B, Gemma-3-12B/27B, and Llama-3.3-70B) into a registry, and adds an optional `nla_explainer=` parameter to `scan_model_geometry` so a geometry profile can carry an NLA explanation alongside each measured layer.
@@ -218,6 +226,7 @@ report = microscope.full_scan(model, tokenizer, prompt="The capital of France is
 |---|---|---|
 | Geometry scanner | `prism.geometry` | Quantisation hostility profiling |
 | Natural-language autoencoders | `prism.nla` | Per-layer activation verbalisation (Anthropic, May 2026) |
+| Model provenance | `prism.provenance` | Weight-fingerprint lineage detection (Cisco MPK, May 2026) |
 | Causal patching | `prism.causal` | Activation swap & attribution patching |
 | Logit / Tuned Lens | `prism.lens` | Vocabulary projection at every layer |
 | Attention circuits | `prism.attention` | Induction head detection, OV/QK SVD |
