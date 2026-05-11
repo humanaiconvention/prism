@@ -48,7 +48,10 @@ class NLACheckpoint:
 # Released by kitft following Anthropic's May 2026 NLA paper. Layer
 # selections match the depths Anthropic reports in the paper appendices
 # (roughly 2/3 through the network). d_model values come from the
-# corresponding target model configs on the Hub.
+# corresponding target model configs on the Hub (verified 2026-05-11
+# against config.json on huggingface.co for Qwen2.5-7B-Instruct,
+# gemma-3-12b-it, gemma-3-27b-it; Llama-3.3-70B-Instruct is gated and
+# uses the published Llama-3.x 70B value).
 _REGISTRY: Dict[str, NLACheckpoint] = {
     "kitft/nla-qwen2.5-7b-instruct-layer20": NLACheckpoint(
         nla_id="kitft/nla-qwen2.5-7b-instruct-layer20",
