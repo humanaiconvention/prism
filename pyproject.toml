@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "humanaiconvention-prism"
-version = "1.2.0"
+version = "1.2.1"
 description = "Model-agnostic activation geometry and mechanistic interpretability toolkit for transformer language models."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -34,6 +34,7 @@ dependencies = [
   "torch>=2.1.0",
   "transformers>=4.40.0",
   "numpy>=1.24.0",
+  "scipy>=1.10.0",           # required: prism.phase.coherence uses scipy.signal.hilbert at import time
 ]
 
 [project.optional-dependencies]
@@ -54,9 +55,13 @@ dev = [
   "pytest-cov>=4.1.0",
   "ruff>=0.4.0",
 ]
+# Dense-embedding evaluation metrics (lazy-loaded inside prism.eval.metrics)
+dense-eval = [
+  "sentence-transformers>=2.0.0",
+]
 # Everything
 all = [
-  "humanaiconvention-prism[quantized,notebook,dev]",
+  "humanaiconvention-prism[quantized,notebook,dev,dense-eval]",
 ]
 
 [project.urls]

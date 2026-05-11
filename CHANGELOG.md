@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-05-11
+
+### Fixed
+- **Add `scipy>=1.10.0` to install requirements.**  `prism.phase.coherence`
+  imports `scipy.signal.hilbert` at module load time, which transitively
+  blocks `import prism` itself on a clean install.  The dev environment
+  has scipy as a transitive of pandas/sklearn so `pip install -e .`
+  worked locally, but the 1.2.0 TestPyPI wheel could not be imported on
+  a fresh venv.  Surfaced during TestPyPI verification, not after a real
+  PyPI publish.
+- Declare `sentence-transformers` under a new `dense-eval` optional extra
+  (`pip install 'humanaiconvention-prism[dense-eval]'`).  It is lazily
+  imported inside `prism.eval.metrics` so its absence does not block
+  `import prism`, but users running dense-embedding grounding metrics
+  now have a discoverable install path.
+
+### Notes
+- 1.2.0 exists on TestPyPI but was never published to real PyPI.  This
+  release supersedes it; do not deploy 1.2.0.
+
 ## [1.2.0] - 2026-05-11
 
 > First public release on PyPI.
