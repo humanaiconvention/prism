@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-11
+
+### Added
+- **`prism.nla` submodule** — integration with Anthropic's Natural Language
+  Autoencoders (May 2026, https://transformer-circuits.pub/2026/nla/index.html):
+  - `NLAExplanation` / `NLABatchResult` typed dataclasses.
+  - `NLACheckpoint` registry with four released NLAs from
+    [kitft/nla-models](https://github.com/kitft/natural_language_autoencoders)
+    (Qwen2.5-7B layer 20, Gemma-3-12B layer 32, Gemma-3-27B layer 41,
+    Llama-3.3-70B layer 53). Explicit non-entry: no NLA exists for
+    `google/gemma-4-e2b-it`.
+  - `NLAExplainer` HTTP client over kitft's SGLang serving contract,
+    with a pluggable transport so tests need no network.
+  - `MockNLAExplainer` / `mock_explainer()` for deterministic offline tests.
+  - `summarize_layer()` aggregation into a single per-layer result.
+- **`scan_model_geometry(..., nla_explainer=)` parameter** — when supplied,
+  the scanner verbalises one layer's activations and attaches an `nla`
+  block (`layer_idx`, `n_samples`, `explanations`, `summary`, `mean_fve`,
+  `fve_std`). Refuses cross-architecture scans via `d_model` validation.
+- `docs/NLA.md` — full design doc covering the technique, the inference
+  contract, what is and isn't released, when to use NLA vs geometry alone,
+  cost transparency, and Anthropic's four disclosed limitations verbatim.
+- README "Natural Language Autoencoders" section in the Methodology block.
+- 28 new tests across `tests/test_nla_inference.py` and
+  `tests/test_nla_geometry.py`. No GPU and no network required.
+
+### Changed
+- README API reference now lists `prism.nla` alongside the other 14 modules.
+- `pyproject.toml` version bumped to `1.1.0`.
+
+### Notes
+- PRISM remains under CC BY 4.0. The kitft inference wire format is
+  Apache-2.0; only that format is referenced here, not any of its code.
+- The `nla` block deliberately does not echo raw activation vectors —
+  NLA's purpose is to surface human-readable text.
+
 ## [0.2.0] - 2026-03-30
 
 ### Added

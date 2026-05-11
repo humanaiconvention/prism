@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "humanaiconvention-prism"
-version = "1.0.0"
+version = "1.1.0"
 description = "Model-agnostic activation geometry and mechanistic interpretability toolkit for transformer language models."
 readme = "README.md"
 requires-python = ">=3.10"

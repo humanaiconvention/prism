@@ -193,6 +193,14 @@ for ckpt in checkpoints:
 
 ---
 
+## Natural Language Autoencoders
+
+PRISM's geometry metrics describe the *structure* of hidden states.  In May 2026 [Anthropic published Natural Language Autoencoders (NLAs)](https://transformer-circuits.pub/2026/nla/index.html), a complementary technique that describes the *semantics* of those same hidden states — a learned decoder converts an activation token into a natural-language explanation of what the layer appears to be representing.  PRISM 1.1.0 adds a `prism.nla` submodule that bundles the public Anthropic-style checkpoints (released by [kitft](https://github.com/kitft/natural_language_autoencoders) under Apache-2.0 for Qwen2.5-7B, Gemma-3-12B/27B, and Llama-3.3-70B) into a registry, and adds an optional `nla_explainer=` parameter to `scan_model_geometry` so a geometry profile can carry an NLA explanation alongside each measured layer.
+
+NLAs are powerful but not mechanistic — Anthropic flags four honest limitations (confabulation, blackbox-by-construction, excessive expressivity, training cost) which PRISM repeats verbatim in [`docs/NLA.md`](docs/NLA.md).  There is no released NLA for Gemma-4-E2B-it, and PRISM will not silently run a foreign-architecture NLA against Gemma-4 activations — `scan_model_geometry` raises on `d_model` mismatch.  Treat NLA text as a hypothesis generator paired with a geometric anomaly, not as ground truth.
+
+---
+
 ## Full Toolkit
 
 PRISM is a 14-module library.  The geometry scanner is its primary entry point, but the full suite is available for deeper mechanistic analysis.
@@ -209,6 +217,7 @@ report = microscope.full_scan(model, tokenizer, prompt="The capital of France is
 | Module | Import | Capability |
 |---|---|---|
 | Geometry scanner | `prism.geometry` | Quantisation hostility profiling |
+| Natural-language autoencoders | `prism.nla` | Per-layer activation verbalisation (Anthropic, May 2026) |
 | Causal patching | `prism.causal` | Activation swap & attribution patching |
 | Logit / Tuned Lens | `prism.lens` | Vocabulary projection at every layer |
 | Attention circuits | `prism.attention` | Induction head detection, OV/QK SVD |
