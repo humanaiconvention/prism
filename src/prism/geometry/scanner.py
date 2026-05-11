@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import math
 import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 # ─── optional heavy imports — fail lazily so the pure-NumPy path still works ──
 
@@ -75,6 +75,8 @@ def scan_model_geometry(
     load_in_4bit: bool = False,
     load_in_8bit: bool = False,
     trust_remote_code: bool = False,
+    nla_explainer: Optional[Any] = None,
+    nla_n_samples: int = 16,
 ) -> Dict[str, Any]:
     """Measure per-layer outlier geometry across every transformer block.
 
@@ -107,6 +109,16 @@ def scan_model_geometry(
             *model_or_name* is a string.
         trust_remote_code: Passed to ``from_pretrained`` when loading from a
             string identifier.
+        nla_explainer: Optional Natural Language Autoencoder explainer
+            (any object exposing ``layer_idx``, ``d_model``, and
+            ``explain_batch``).  When supplied, the scan additionally
+            verbalises *that one* layer's activations and attaches an
+            ``nla`` block to the result.  See :mod:`prism.nla` and
+            ``docs/NLA.md`` for the technique and its honest disclosed
+            limitations.  Defaults to ``None`` (no NLA pass).
+        nla_n_samples: How many sequence positions from the target layer
+            to verbalise when *nla_explainer* is set.  Capped to the
+            sequence length.  Defaults to 16.
 
     Returns:
         A dict with the following keys:
@@ -269,7 +281,7 @@ def scan_model_geometry(
     best_idx = min(range(len(hostilities)), key=lambda i: hostilities[i])
     n_hostile = sum(1 for h in hostilities if h > HOSTILITY_WARN_THRESHOLD)
 
-    return {
+    result: Dict[str, Any] = {
         "model_name": model_name,
         "prompt": prompt,
         "n_layers": len(layer_results),
@@ -281,3 +293,74 @@ def scan_model_geometry(
         "best_layer_hostility": hostilities[best_idx],
         "n_hostile_layers": n_hostile,
     }
+
+    if nla_explainer is not None:
+        result["nla"] = _run_nla_pass(
+            layer_hidden_states=layer_hidden_states,
+            nla_explainer=nla_explainer,
+            n_samples=nla_n_samples,
+        )
+
+    return result
+
+
+def _run_nla_pass(
+    *,
+    layer_hidden_states: Sequence[Any],
+    nla_explainer: Any,
+    n_samples: int,
+) -> Dict[str, Any]:
+    """Verbalise one target layer with *nla_explainer* and bundle the result.
+
+    Pulled out of :func:`scan_model_geometry` so the back-compat path stays
+    obviously unchanged when ``nla_explainer is None``.  The returned dict
+    intentionally does NOT carry the raw activation vectors that were fed
+    to the NLA — the whole point of NLA is to surface human-readable text.
+    """
+    from ..nla.summary import summarize_layer  # local import to avoid cycles
+
+    if not hasattr(nla_explainer, "explain_batch"):
+        raise TypeError(
+            "nla_explainer must expose an explain_batch(activations) method "
+            f"(got {type(nla_explainer).__name__})."
+        )
+
+    layer_idx = getattr(nla_explainer, "layer_idx", None)
+    if layer_idx is None:
+        raise ValueError(
+            "nla_explainer is missing a 'layer_idx' attribute; cannot decide "
+            "which layer to verbalise."
+        )
+    if not (0 <= layer_idx < len(layer_hidden_states)):
+        raise ValueError(
+            f"nla_explainer.layer_idx={layer_idx} is outside the scanned "
+            f"range [0, {len(layer_hidden_states) - 1}]."
+        )
+
+    expected_d = getattr(nla_explainer, "d_model", None)
+    target_h = layer_hidden_states[layer_idx][0]  # (seq_len, d_model)
+    actual_d = int(target_h.shape[-1])
+    if expected_d is not None and expected_d != actual_d:
+        raise ValueError(
+            f"nla_explainer expects d_model={expected_d} but target layer "
+            f"{layer_idx} has d_model={actual_d}.  Refusing to run an "
+            "NLA against the wrong architecture (see docs/NLA.md)."
+        )
+
+    seq_len = int(target_h.shape[0])
+    sample_count = min(max(n_samples, 1), seq_len)
+    # Evenly spaced positions across the sequence so we don't bias toward
+    # the prompt's prefix or suffix.
+    if sample_count >= seq_len:
+        positions = list(range(seq_len))
+    else:
+        step = seq_len / sample_count
+        positions = [int(i * step) for i in range(sample_count)]
+
+    # Cast to float32 numpy once; activations may arrive in fp16/bf16/4bit.
+    target_np = target_h.float().detach().cpu().numpy()
+    activations = [target_np[p] for p in positions]
+
+    explanations = nla_explainer.explain_batch(activations)
+    batch = summarize_layer(layer_idx=layer_idx, explanations=explanations)
+    return batch.to_dict()
