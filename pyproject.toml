@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "humanaiconvention-prism"
-version = "1.2.1"
+version = "1.2.2"
 description = "Model-agnostic activation geometry and mechanistic interpretability toolkit for transformer language models."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,6 +35,7 @@ dependencies = [
   "transformers>=4.40.0",
   "numpy>=1.24.0",
   "scipy>=1.10.0",           # required: prism.phase.coherence uses scipy.signal.hilbert at import time
+  "pandas>=2.0.0",           # required: prism.eval.temporal eagerly imports pandas at module load
 ]
 
 [project.optional-dependencies]
@@ -43,9 +44,10 @@ quantized = [
   "bitsandbytes>=0.41.0",
   "accelerate>=0.21.0",
 ]
-# Notebook / visualisation environment
+# Notebook / visualisation environment.  pandas moved to base deps in 1.2.2
+# because prism.eval.temporal imports it at module load; keeping matplotlib +
+# jupyter here since they're only needed when running notebooks.
 notebook = [
-  "pandas>=2.0.0",
   "matplotlib>=3.7.0",
   "jupyter>=1.0.0",
 ]

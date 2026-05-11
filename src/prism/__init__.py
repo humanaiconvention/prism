@@ -19,7 +19,7 @@ Quick start::
 See https://github.com/humanaiconvention/prism for documentation.
 """
 
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 
 from .analysis import (
     compute_spectral_metrics,

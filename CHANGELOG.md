@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-05-11
+
+### Fixed
+- **Add `pandas>=2.0.0` to install requirements.**  `prism.eval.temporal`
+  imports `pandas as pd` at module load, and `prism.eval.__init__`
+  chains to it, so `import prism.eval` (and any submodule sweep) fails
+  without pandas.  Surfaced during the post-1.2.1 import-sweep audit;
+  scipy was the larger blocker and was fixed in 1.2.1, but pandas was
+  hiding behind it.
+- Removed `pandas` from the `notebook` optional extras group — it is
+  now a base dependency, so the duplicate listing would be confusing.
+  `notebook` retains matplotlib + jupyter for users who actually run
+  the analysis notebooks.
+
+### Notes
+- 1.2.0 and 1.2.1 exist on TestPyPI as failed verification runs; neither
+  was published to real PyPI.  This release supersedes both.
+
 ## [1.2.1] - 2026-05-11
 
 ### Fixed
