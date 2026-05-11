@@ -25,6 +25,16 @@ class ProvenanceSignals:
     All values are in ``[0.0, 1.0]``.  Higher means more similar.  See
     ``docs/PROVENANCE.md`` for what each signal actually measures and the
     architectural assumptions baked into it.
+
+    .. note::
+       In a ``scan`` result, MPK skips weight-level signal computation
+       for matches that pass the cheap architecture-fingerprint check
+       (``match_type == "exact_arch"``).  In that case all five signals
+       come back as 0.0 — which is *not* the same as "verified zero
+       similarity."  Cross-check ``ProvenanceResult.metadata.get(
+       "mpk_match_types")`` before drawing inferences from per-signal
+       values in a scan.  Compare results (``compare_models``) always
+       load weights and so always carry real signal values.
     """
 
     eas: float  # Embedding Anchor Similarity

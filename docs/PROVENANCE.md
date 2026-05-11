@@ -216,3 +216,57 @@ if `is_match` is `False`.
 MPK is Apache-2.0; its reference dataset is CC BY 4.0.  PRISM stays
 under CC BY 4.0.  No code from MPK is vendored — only its public Python
 API surface is consumed.
+
+---
+
+## 9. Live-backend smoke check (2026-05-11)
+
+The adapter was first validated against the real `provenancekit==1.0.0`
+package on 2026-05-11 (PyPI distribution `cisco-ai-provenance-kit`).
+First-call timing on the BEAST (CPU-only):
+
+| Call | First call | Cached |
+|---|---|---|
+| `compare("Qwen/Qwen2.5-7B-Instruct", "Qwen/Qwen2.5-7B-Instruct")` | 275 s (downloads Qwen2.5-7B weights, ~15 GB) | 3.8 s |
+| `scan("Qwen/Qwen2.5-7B-Instruct", top_k=3)` | 4.4 s (architecture fingerprint lookup, no weights) | 2.1 s |
+
+Findings the live run surfaced:
+
+1. **Schema:** MPK 1.0.0 returns `CompareResult` with the composite
+   score at `.scores.pipeline_score` (not `.composite_score`) and the
+   family at `.family_b` (not `.family`).  The initial duck-typed
+   adapter assumed the wrong shape and would have returned
+   `is_match=False, composite_score=0.0` for identical models.
+   Fixed.  Three regression tests in `tests/test_provenance.py`
+   (class `TestMPKRealSchema`) now lock the real shape in.
+2. **Scan signals are None for tier-1 matches.** `exact_arch` matches
+   skip weight-level signal computation entirely — MPK returns `None`
+   for EAS/END/NLF/LEP/WVC.  PRISM coerces these to `0.0`, but records
+   `mpk_match_types` and `mpk_decisions` in metadata so audit
+   consumers can distinguish "not measured" from "measured as zero."
+3. **Version detection:** the PyPI distribution name
+   (`cisco-ai-provenance-kit`) differs from the import package name
+   (`provenancekit`).  The version lookup tries both before falling
+   back to `mpk-unknown`.
+4. **Audit-dict shape with real backend:**
+   ```json
+   {
+     "model": "Qwen/Qwen2.5-7B-Instruct",
+     "method": "mpk",
+     "method_version": "mpk-1.0.0",
+     "threshold": 0.7,
+     "is_match": true,
+     "not_cryptographic": true,
+     "composite_score": 1.0,
+     "top_match_asset": "Qwen/Qwen2.5-7B-Instruct",
+     "top_match_family": "qwen",
+     "top_match_signals": {"eas": 1.0, "end": 1.0, "nlf": 1.0, "lep": 1.0, "wvc": 1.0},
+     "metadata": {
+       "mode": "compare",
+       "mpk_decision": "Confirmed Match",
+       "mpk_mfi_tier": 1,
+       "mpk_interpretation": "High-Confidence Match",
+       "mpk_elapsed": 3.76
+     }
+   }
+   ```
