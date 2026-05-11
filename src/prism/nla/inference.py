@@ -18,16 +18,41 @@ Choice of HTTP-only path
 ------------------------
 A direct in-process PyTorch path would also work — load the AR + AV
 locally and run forward passes — but it would force every PRISM user to
-pull tens of GB of weights and a GPU. The HTTP path matches kitft's
-released serving design, keeps weights on the model server, and keeps
-the wire payload tiny (one ``float32`` vector per call). Users who need
-in-process inference can subclass :class:`NLAExplainer` and override
-:meth:`NLAExplainer._call_remote`.
+pull tens of GB of weights and a GPU. The HTTP path keeps weights on
+the model server and keeps the wire payload tiny (one ``float32`` vector
+per call). Users who need in-process inference can subclass
+:class:`NLAExplainer` and override :meth:`NLAExplainer._call_remote`.
+
+Wire format and the kitft gap
+-----------------------------
+This client expects a **wrapper API**: a single endpoint that accepts
+
+::
+
+    POST {server_url}
+    { "activation_vector": [float, ...],
+      "nla_id": "kitft/nla-...",
+      "layer_idx": <int> }
+
+and returns
+
+::
+
+    { "text": "...",
+      "reconstruction_fve": <float>,
+      "reconstructed_vector": [float, ...] (optional),
+      "metadata": {...} (optional) }
+
+That is *not* the wire format used by kitft's released ``nla_inference.py``,
+which talks SGLang's ``/generate`` directly with ``input_embeds`` and
+does FVE scoring as a separate AR pass.  PRISM treats the wrapper API
+as the canonical contract and lets users bridge to kitft via the
+``transport=`` callable — see ``docs/NLA.md`` §8 for an example.
 
 License
 -------
 The kitft inference contract is Apache-2.0; PRISM remains CC BY 4.0.
-Only the wire format is reproduced here, not any code from that repo.
+Only the wire format is described here, not any code from that repo.
 """
 
 from __future__ import annotations

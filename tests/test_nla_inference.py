@@ -182,6 +182,52 @@ class TestHTTPClient:
         with pytest.raises(ValueError, match="text"):
             exp.explain(np.zeros(16))
 
+    def test_kitft_style_two_phase_transport_bridge(self):
+        """Documents the extension pattern from docs/NLA.md §8.
+
+        kitft's released nla_inference.py uses a two-phase flow:
+          (1) POST /generate {input_embeds, sampling_params} -> {text}
+          (2) Locally run the AR against the AV's text to get FVE.
+
+        PRISM's NLAExplainer expects a single wrapped response, so a
+        user bridges the two via a transport= closure.  This test
+        builds such a closure against in-memory fakes and confirms
+        the bridge produces a valid NLAExplanation.
+        """
+        kitft_calls = {"phase1": 0, "phase2": 0}
+
+        def fake_sglang(payload):
+            """Phase 1: PRISM's {activation_vector,...} -> kitft's {text}."""
+            kitft_calls["phase1"] += 1
+            assert "input_embeds" in payload  # bridge converted the key
+            return {"text": "the activation appears to encode <topic>"}
+
+        def fake_ar_run(activation, text):
+            """Phase 2: in-process AR reconstruction (stub)."""
+            kitft_calls["phase2"] += 1
+            arr = np.asarray(activation, dtype=np.float32)
+            return 0.71, (arr * 0.71).tolist()
+
+        def kitft_transport(payload):
+            phase1 = fake_sglang({
+                "input_embeds": payload["activation_vector"],
+                "sampling_params": {"temperature": 1.0, "max_new_tokens": 200},
+            })
+            fve, rec = fake_ar_run(payload["activation_vector"], phase1["text"])
+            return {
+                "text": phase1["text"],
+                "reconstruction_fve": fve,
+                "reconstructed_vector": rec,
+            }
+
+        exp = NLAExplainer(self._ckpt(), server_url="http://x", transport=kitft_transport)
+        r = exp.explain(np.arange(16, dtype=np.float32))
+        assert r.text.startswith("the activation appears")
+        assert r.reconstruction_fve == pytest.approx(0.71)
+        assert r.reconstructed_vector is not None
+        assert r.reconstructed_vector.shape == (16,)
+        assert kitft_calls == {"phase1": 1, "phase2": 1}
+
 
 # ─── summary aggregation ────────────────────────────────────────────────────
 

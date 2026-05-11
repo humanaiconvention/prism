@@ -220,7 +220,69 @@ pure CPU/numpy.
 
 ---
 
-## 8. Versioning
+## 8. Talking to kitft's raw SGLang endpoint
+
+The default `NLAExplainer` expects a **wrapper API**: a single endpoint
+that takes `{activation_vector, nla_id, layer_idx}` and returns
+`{text, reconstruction_fve, reconstructed_vector?}`.  This is **not**
+the wire format kitft's released `nla_inference.py` uses.
+
+kitft uses two phases:
+
+1. POST the activation to SGLang's `/generate` as
+   `{input_embeds: <numpy_bytes>, sampling_params: {temperature: 1.0, max_new_tokens: 200, ...}}`.
+   Response: `{text: "..."}` — text only.
+2. Run the AR (first ℓ layers of the target + an affine map) against
+   the AV's output to compute the reconstruction and the FVE.  This is
+   typically done in-process by `nla_inference.py` or against a second
+   server.
+
+If you have a real kitft setup, write a `transport=` callable that
+bridges the two formats:
+
+```python
+import requests
+from prism.nla import NLAExplainer, get_checkpoint
+
+def kitft_transport(sglang_url, ar_runner):
+    """Closure: turns PRISM's wrapper payload into kitft's two-phase flow."""
+    def _t(payload):
+        # Phase 1 — verbalize
+        resp = requests.post(
+            f"{sglang_url}/generate",
+            json={
+                "input_embeds": payload["activation_vector"],
+                "sampling_params": {"temperature": 1.0, "max_new_tokens": 200},
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        text = resp.json()["text"]
+        # Phase 2 — score (ar_runner is your local AR inference function)
+        fve, rec = ar_runner(payload["activation_vector"], text)
+        return {"text": text, "reconstruction_fve": fve, "reconstructed_vector": rec}
+    return _t
+
+exp = NLAExplainer(
+    get_checkpoint("kitft/nla-gemma-3-12b-it-layer32"),
+    transport=kitft_transport("http://my-sglang:30000", my_local_ar_runner),
+)
+```
+
+This is intentionally a **two-step bridge** rather than baked into
+`prism.nla` — PRISM does not pretend to know your AR serving topology.
+A future `KitftSGLangBackend` class could be added once a reference
+deployment exists to test against; until then, the transport callable
+is the canonical extension point.
+
+Status (2026-05-11): no end-to-end test exists in PRISM that talks to
+a real kitft server.  HAIC's local BEAST (RTX 2080, 8 GB VRAM) cannot
+host a 12 B AR, so live validation is deferred until a remote NLA host
+is available.
+
+---
+
+## 9. Versioning
 
 NLA support landed in PRISM **1.1.0**.  The integration is
 additive and back-compatible — every call site that worked in 0.2.0
