@@ -214,13 +214,15 @@ def run(cfg: RunCfg) -> dict:
     # at the first optimizer step. Generation/eval still run in mixed precision via Trainer.
     model = AutoModelForCausalLM.from_pretrained(cfg.model).to(device)
 
-    teacher = teacher_tok = None
+    # Teacher: lazily loaded inside the per-generation loop and unloaded before
+    # fine_tune so trainee activations + grads don't fight teacher weights for
+    # VRAM. The v4 smoke (0.5B trainee + 1.5B-Instruct teacher in 8-bit) OOMed
+    # on T4 14.5 GB during the gen-5 fine_tune backward pass; co-residency is
+    # not viable on T4 for any non-trivial teacher. See DEVIATIONS K4.
+    teacher_tok = None
     if oracle == "teacher_filter" and cfg.teacher:
         teacher_tok = AutoTokenizer.from_pretrained(cfg.teacher)
         if teacher_tok.pad_token is None: teacher_tok.pad_token = teacher_tok.eos_token
-        teacher = AutoModelForCausalLM.from_pretrained(
-            cfg.teacher, torch_dtype=torch.float16, device_map="auto", load_in_8bit=True
-        )
 
     val = real_val(); arc = arc_easy(cfg.eval_arc_n)
     anchor = real_train_slice(0, cfg.samples_per_gen) if real_source == "anchor" else None
@@ -243,9 +245,21 @@ def run(cfg: RunCfg) -> dict:
                                cfg.samples_per_gen, cfg.max_new_tokens)
 
         # 2. apply oracle correction if R4-style
+        # Teacher is loaded just-in-time and unloaded after relabel to keep VRAM
+        # available for the trainee's fine_tune step. Reloading the 8-bit teacher
+        # each gen costs ~30 s for 7B-class models; cheap relative to a single
+        # gen's fine_tune (~15 min on T4) and a hard requirement for fitting
+        # 7B-Instruct + 0.5B trainee inside T4 16 GB.
         if oracle == "teacher_filter":
+            import gc
+            teacher = AutoModelForCausalLM.from_pretrained(
+                cfg.teacher, torch_dtype=torch.float16, device_map="auto", load_in_8bit=True
+            )
             corr_frac = cfg.correction_frac if cfg.correction_frac is not None else 0.5
             synth = teacher_relabel(synth, teacher, teacher_tok, corr_frac)
+            del teacher
+            gc.collect()
+            torch.cuda.empty_cache()
 
         # 3. assemble training set per regime
         n_synth = int(cfg.samples_per_gen * synth_frac)
