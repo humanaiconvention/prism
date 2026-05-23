@@ -210,6 +210,46 @@ accelerators. This is a memory-management decision; the per-generation
 teacher_relabel logic, deterministic greedy decoding, and correction
 fraction are unchanged."
 
+### Patch K5: batch `teacher_relabel`
+- **Where**: `experiments/sgt/sgt_runner.py:teacher_relabel`. PRISM main
+  commit `8e5f4a2`.
+- **Change**: The pre-v11 `teacher_relabel` looped one sample at a time
+  through `teacher_model.generate`. Now it batches with left-padding
+  (`batch_size=8` default), matching the `make_synthetic` pattern.
+- **Why (v5 evidence)**: With the production teacher `Qwen2.5-7B-Instruct`
+  in 8-bit on T4, the single-sample loop took ~230 minutes per generation
+  for 1000 relabel items. v5 was killed by Kaggle's session cap at 3.91
+  hours after completing only gen 1. Batched generation reduces per-gen
+  wall-clock by roughly 10x for this teacher/trainee/batch combination.
+- **Output equivalence**: greedy decoding (`do_sample=False`) is invariant
+  to batch shape modulo left-padding; the same prefix produces the same
+  continuation regardless of whether it is in a batch of 1 or a batch of 8.
+- **Affects decision rules?** No.
+
+### Patch K6: empty CUDA cache after `fine_tune` in R4 loop
+- **Where**: `experiments/sgt/sgt_runner.py` per-generation loop, after
+  the `fine_tune` call, only when `oracle == "teacher_filter"`. PRISM
+  main commit `8e5f4a2`.
+- **Change**: `gc.collect()` + `torch.cuda.empty_cache()` after
+  `fine_tune` and before the next iteration's `make_synthetic` call.
+- **Why (v5 evidence)**: After fine_tune, the optimizer state and gradient
+  buffers attached to the trainee continue to occupy ~5-6 GB of T4 VRAM
+  through the next iteration's `make_synthetic` and on into the next
+  teacher load. Without K6, accelerate's `device_map="auto"` offloads
+  teacher weights to CPU on the gen-N+1 load. Once a teacher layer is
+  on CPU, every batched generate() call shuffles weights across the
+  PCIe bus, slowing `teacher_relabel` another ~10x even after K5.
+  v5 log showed the CPU-offload warning at exactly the gen-2 teacher load.
+- **Affects decision rules?** No. Pure memory hygiene.
+
+**Kaggle session-cap observation (not a patch)**: v5 was killed at 3.91
+hours with the message "exceeded the max allowed execution duration."
+For free-tier T4 commit-mode notebooks Kaggle currently enforces a
+duration shorter than the historical 12-hour cap. The v11 sweep is
+therefore split into 3 sub-sweeps each fitting in ~2.5-3 hours of
+wall-clock with the K5+K6 patches applied. Documented in
+`D:/humanai-convention/experiments/improvement/sgt_v11/v11_plan.md`.
+
 ---
 
 ## Summary statement for the v11 paper
