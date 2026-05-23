@@ -151,18 +151,44 @@ def make_synthetic(model, tok, prompts_source, n: int, max_new_tokens: int,
 
 # ---------- teacher correction (R4) ----------
 
-def teacher_relabel(synthetic: Dataset, teacher_model, teacher_tok, frac: float) -> Dataset:
+def teacher_relabel(synthetic: Dataset, teacher_model, teacher_tok, frac: float,
+                    batch_size: int = 8) -> Dataset:
     """Replace `frac` of the synthetic items with teacher continuations of the same prefix.
-    Cheap proxy for verifier-in-the-loop; deterministic decoding for the teacher."""
-    n_keep = int(len(synthetic) * (1.0 - frac)); n_relabel = len(synthetic) - n_keep
+    Cheap proxy for verifier-in-the-loop; deterministic decoding for the teacher.
+
+    Batched. The pre-v11 implementation was single-sample; for 1000 relabel
+    items on a 7B-Instruct teacher in 8-bit that took ~230 min/gen on T4 and
+    blew through Kaggle's session duration cap during the v5 smoke. The
+    decoding policy is unchanged (`do_sample=False`, `max_new_tokens=128`).
+    Output equivalence: greedy decoding with left-padding produces the same
+    continuations per prefix as the single-sample loop did.
+    """
+    n_keep = int(len(synthetic) * (1.0 - frac))
+    n_relabel = len(synthetic) - n_keep
     out = list(synthetic.select(range(n_keep)))
-    for ex in synthetic.select(range(n_keep, n_keep + n_relabel)):
-        seed_txt = " ".join(ex["text"].split()[:5])
-        x = teacher_tok(seed_txt, return_tensors="pt").to(teacher_model.device)
-        with torch.no_grad():
-            g = teacher_model.generate(**x, max_new_tokens=128, do_sample=False,
-                                       pad_token_id=teacher_tok.eos_token_id)
-        out.append({"text": teacher_tok.decode(g[0], skip_special_tokens=True)})
+
+    prefixes = [
+        " ".join(ex["text"].split()[:5])
+        for ex in synthetic.select(range(n_keep, n_keep + n_relabel))
+    ]
+
+    prev_pad_side = teacher_tok.padding_side
+    teacher_tok.padding_side = "left"
+    try:
+        for i in range(0, len(prefixes), batch_size):
+            batch = prefixes[i:i + batch_size]
+            enc = teacher_tok(batch, return_tensors="pt", padding=True,
+                              truncation=True, max_length=64).to(teacher_model.device)
+            with torch.no_grad():
+                g = teacher_model.generate(
+                    **enc, max_new_tokens=128, do_sample=False,
+                    pad_token_id=teacher_tok.eos_token_id,
+                )
+            for j in range(g.shape[0]):
+                out.append({"text": teacher_tok.decode(g[j], skip_special_tokens=True)})
+    finally:
+        teacher_tok.padding_side = prev_pad_side
+
     return Dataset.from_list(out)
 
 # ---------- training ----------
@@ -280,6 +306,17 @@ def run(cfg: RunCfg) -> dict:
         # 4. fine-tune on this gen's data
         fine_tune(model, tok, train_ds, cfg.train_epochs, cfg.batch_size,
                   work_dir=f"{cfg.out_dir}/_tmp_g{gen}")
+
+        # Release fine_tune's optimizer state and gradient buffers so the
+        # next-gen teacher load (K4) doesn't get CPU-offloaded for lack of
+        # VRAM. The v5 smoke (3.91 hr, killed) showed accelerate offloading
+        # 7B-Instruct teacher layers to CPU when fine_tune state hadn't been
+        # cleared, which then slowed teacher_relabel by ~10x via per-layer
+        # CPU-GPU shuffling. K6.
+        if oracle == "teacher_filter":
+            import gc
+            gc.collect()
+            torch.cuda.empty_cache()
 
         # 5. eval against immutable anchors
         ppl = eval_perplexity(model, tok, val); acc = eval_arc(model, tok, arc)
