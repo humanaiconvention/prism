@@ -152,7 +152,7 @@ def make_synthetic(model, tok, prompts_source, n: int, max_new_tokens: int,
 # ---------- teacher correction (R4) ----------
 
 def teacher_relabel(synthetic: Dataset, teacher_model, teacher_tok, frac: float,
-                    batch_size: int = 8) -> Dataset:
+                    batch_size: int = 16) -> Dataset:
     """Replace `frac` of the synthetic items with teacher continuations of the same prefix.
     Cheap proxy for verifier-in-the-loop; deterministic decoding for the teacher.
 
