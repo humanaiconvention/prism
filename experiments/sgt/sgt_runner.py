@@ -266,9 +266,10 @@ def fine_tune(model, tok, ds: Dataset, epochs: int, batch_size: int, work_dir: s
 
 # ---------- main loop ----------
 
-def run(cfg: RunCfg) -> dict:
+def run(cfg: RunCfg, ckpt_path=None) -> dict:
     lock_seeds(cfg.seed)
     replace, synth_frac, real_source, oracle = regime_spec(cfg)
+    _t_start = time.time()
 
     tok = AutoTokenizer.from_pretrained(cfg.model)
     if tok.pad_token is None: tok.pad_token = tok.eos_token
@@ -300,7 +301,29 @@ def run(cfg: RunCfg) -> dict:
                     "grounded_arc_accuracy": acc0,
                     "grounded_arc_acc_llnorm": acc0_llnorm,
                     "grounded_arc_acc_llraw": acc0_llraw})
-    print(f"[gen 0] ppl={ppl0:.3f} acc={acc0:.3f}")
+    print(f"[gen 0] ppl={ppl0:.3f} acc={acc0:.3f} acc_llnorm={acc0_llnorm:.3f}", flush=True)
+
+    def _ckpt(done: int):
+        """Write the result-so-far after every generation so a session-cap kill
+        (Kaggle ~3.9 hr) leaves a valid JSON with all completed generations,
+        not nothing. Also dumps a single-line RESULT_JSON to stdout so the result
+        is recoverable from the kernel log even if file output/zip fails."""
+        partial = {"cfg": asdict(cfg), "history": history,
+                   "baseline": {"ppl": ppl0, "acc": acc0,
+                                "acc_llnorm": acc0_llnorm, "acc_llraw": acc0_llraw},
+                   "generations_done": done, "complete": done >= cfg.generations,
+                   "wallclock_s": round(time.time() - _t_start, 1),
+                   "torch_version": torch.__version__}
+        if ckpt_path is not None:
+            try:
+                Path(ckpt_path).write_text(json.dumps(partial, indent=2))
+            except Exception as e:
+                print(f"[ckpt-warn] {e}", flush=True)
+        # one-line stdout dump (always in the kernel log)
+        print("RESULT_JSON " + json.dumps(partial), flush=True)
+        return partial
+
+    _ckpt(0)
 
     accum_synth: Dataset | None = None
     fresh_offset = cfg.samples_per_gen  # R3 starts after the seed slice
@@ -369,13 +392,17 @@ def run(cfg: RunCfg) -> dict:
                         "grounded_arc_accuracy": acc,
                         "grounded_arc_acc_llnorm": acc_llnorm,
                         "grounded_arc_acc_llraw": acc_llraw})
-        print(f"[gen {gen}] ppl={ppl:.3f} acc={acc:.3f} acc_llnorm={acc_llnorm:.3f}")
+        print(f"[gen {gen}] ppl={ppl:.3f} acc={acc:.3f} acc_llnorm={acc_llnorm:.3f}", flush=True)
 
         prompt_source = train_ds  # next gen seeds from this gen's training data
+        _ckpt(gen)  # checkpoint after every generation (anti session-cap loss)
 
     return {"cfg": asdict(cfg), "history": history,
-            "baseline": {"ppl": ppl0, "acc": acc0},
-            "wallclock_s": None, "torch_version": torch.__version__}
+            "baseline": {"ppl": ppl0, "acc": acc0,
+                         "acc_llnorm": acc0_llnorm, "acc_llraw": acc0_llraw},
+            "generations_done": cfg.generations, "complete": True,
+            "wallclock_s": round(time.time() - _t_start, 1),
+            "torch_version": torch.__version__}
 
 def main():
     ap = argparse.ArgumentParser()
@@ -393,15 +420,18 @@ def main():
                  generations=a.generations, samples_per_gen=a.samples_per_gen,
                  correction_frac=a.correction_frac, out_dir=a.out)
     Path(a.out).mkdir(parents=True, exist_ok=True)
-    t0 = time.time()
-    result = run(cfg)
-    result["wallclock_s"] = round(time.time() - t0, 1)
     name = f"{a.regime}_{a.seed}"
     if a.correction_frac is not None:
         name = f"{a.regime}_f{int(a.correction_frac*100)}_{a.seed}"
     out_path = Path(a.out) / f"{name}.json"
+    # Pass out_path into run() so every generation checkpoints to the final file.
+    # A Kaggle session-cap kill mid-run then leaves a valid JSON with all
+    # completed generations (complete=False), not nothing.
+    result = run(cfg, ckpt_path=out_path)
     out_path.write_text(json.dumps(result, indent=2))
-    print(f"wrote {out_path}  ({result['wallclock_s']}s)")
+    print(f"wrote {out_path}  ({result['wallclock_s']}s, complete={result.get('complete')})", flush=True)
+    # Final single-line dump for log-only recovery
+    print("FINAL_RESULT_JSON " + json.dumps(result), flush=True)
 
 if __name__ == "__main__":
     main()
