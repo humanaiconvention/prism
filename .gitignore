@@ -50,3 +50,7 @@ experiments/sgt/runs/**/checkpoint-*/
 !experiments/sgt/runs/**/*.json
 !experiments/sgt/analysis/**/*.json
 !experiments/sgt/analysis/**/*.png
+
+# Internal agent context — never publish to the public mirror
+CLAUDE.md
+AGENTS.local.md
