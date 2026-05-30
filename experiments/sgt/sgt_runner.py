@@ -107,6 +107,9 @@ def eval_perplexity(model, tok, val: Dataset) -> float:
 
 @torch.no_grad()
 def eval_arc(model, tok, ds: Dataset) -> float:
+    """Preregistered substring/first-character grader (prereg v1 §2). UNCHANGED.
+    Note: implements first-character match (ans[:1] == gold), which is looser than
+    'exact-match on the answer letter' — see preregistration_addendum_ll_acc.md."""
     model.eval(); correct = 0
     for ex in ds:
         prompt = f"Question: {ex['question']}\nAnswer:"
@@ -118,6 +121,41 @@ def eval_arc(model, tok, ds: Dataset) -> float:
         if ans[:1].upper() == gold_letter.upper():
             correct += 1
     return correct / len(ds)
+
+@torch.no_grad()
+def eval_arc_llacc(model, tok, ds: Dataset, normalize: bool = True) -> float:
+    """Log-likelihood ARC accuracy (preregistration_addendum_ll_acc.md, committed
+    pre-data 2026-05-29, PRISM d47c2b8). ADDITIVE secondary metric — the
+    preregistered substring grader above is unchanged.
+
+    Locked format 'Question: {q}\\nAnswer: {a}'. normalize=True -> acc_norm
+    (PRIMARY per addendum); normalize=False -> raw-sum acc (secondary). Argmaxes
+    log P(choice_text | prompt) over candidates; robust to letter or numeric
+    answerKeys. Reproduces baseline acc_norm 0.545 / acc_raw 0.590 on fresh
+    Qwen2.5-0.5B over ARC-Easy test[:200] (ll_acc_eval.py --selftest)."""
+    import torch.nn.functional as F
+    model.eval(); correct = 0; n = 0
+    for ex in ds:
+        labels = ex["choices"]["label"]; texts = ex["choices"]["text"]
+        if not texts:
+            continue
+        n += 1
+        prompt = f"Question: {ex['question']}\nAnswer:"
+        plen = tok(prompt, return_tensors="pt").input_ids.shape[1]
+        best_score = None; best_label = None
+        for lab, t in zip(labels, texts):
+            full = tok(prompt + " " + t, return_tensors="pt").input_ids.to(model.device)
+            logits = model(full).logits
+            target = full[0, plen:]
+            used = logits[0, plen - 1: full.shape[1] - 1]
+            lp = F.log_softmax(used.float(), dim=-1)
+            ll = lp.gather(1, target.unsqueeze(1)).squeeze(1).sum().item()
+            score = ll / max(target.shape[0], 1) if normalize else ll
+            if best_score is None or score > best_score:
+                best_score = score; best_label = lab
+        if best_label is not None and best_label.strip().upper() == ex["answerKey"].strip().upper():
+            correct += 1
+    return correct / n if n else float("nan")
 
 # ---------- generation of synthetic corpus ----------
 
@@ -256,8 +294,12 @@ def run(cfg: RunCfg) -> dict:
     # gen 0 = baseline
     history = []
     ppl0 = eval_perplexity(model, tok, val); acc0 = eval_arc(model, tok, arc)
+    acc0_llnorm = eval_arc_llacc(model, tok, arc, normalize=True)
+    acc0_llraw = eval_arc_llacc(model, tok, arc, normalize=False)
     history.append({"generation": 0, "grounded_arc_perplexity": ppl0,
-                    "grounded_arc_accuracy": acc0})
+                    "grounded_arc_accuracy": acc0,
+                    "grounded_arc_acc_llnorm": acc0_llnorm,
+                    "grounded_arc_acc_llraw": acc0_llraw})
     print(f"[gen 0] ppl={ppl0:.3f} acc={acc0:.3f}")
 
     accum_synth: Dataset | None = None
@@ -320,10 +362,14 @@ def run(cfg: RunCfg) -> dict:
 
         # 5. eval against immutable anchors
         ppl = eval_perplexity(model, tok, val); acc = eval_arc(model, tok, arc)
+        acc_llnorm = eval_arc_llacc(model, tok, arc, normalize=True)
+        acc_llraw = eval_arc_llacc(model, tok, arc, normalize=False)
         history.append({"generation": gen,
                         "grounded_arc_perplexity": ppl,
-                        "grounded_arc_accuracy": acc})
-        print(f"[gen {gen}] ppl={ppl:.3f} acc={acc:.3f}")
+                        "grounded_arc_accuracy": acc,
+                        "grounded_arc_acc_llnorm": acc_llnorm,
+                        "grounded_arc_acc_llraw": acc_llraw})
+        print(f"[gen {gen}] ppl={ppl:.3f} acc={acc:.3f} acc_llnorm={acc_llnorm:.3f}")
 
         prompt_source = train_ds  # next gen seeds from this gen's training data
 
