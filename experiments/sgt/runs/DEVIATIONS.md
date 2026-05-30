@@ -294,3 +294,24 @@ makes a regime non-executable), the correct response is to:
 4. Treat the un-executable regime as preregistered-but-not-run
 
 Do not silently change a threshold or metric to make the data look cleaner.
+
+---
+
+## LL-ACC secondary metric (pre-registered addendum, 2026-05-29)
+
+### Patch L1: additive LL-ACC recording in sgt_runner.py
+- **Where**: `experiments/sgt/sgt_runner.py`, commit `bf8f82b` on PRISM main.
+- **Change**: Added `eval_arc_llacc` (length-normalized + raw log-likelihood ARC
+  accuracy) and recorded two new per-generation fields,
+  `grounded_arc_acc_llnorm` and `grounded_arc_acc_llraw`, at the gen-0 baseline
+  and every generation. The preregistered substring grader (`eval_arc`,
+  `grounded_arc_accuracy`) is unchanged.
+- **Why**: The substring grader floor-censors every 0.5B run (baseline 0.025 <
+  0.20), making H1/H4 untestable. LL-ACC baseline ~0.545 un-floors ACC so the
+  prereg's §4 H1/H3/H4 rules become evaluable. Decision rule locked pre-data in
+  `experiments/sgt/preregistration_addendum_ll_acc.md` (`d47c2b8`).
+- **Verified**: the runner's own `eval_arc_llacc` reproduces the C2 baseline
+  (acc_norm 0.545 / acc_raw 0.590, fresh Qwen2.5-0.5B, ARC-Easy test[:200]) by
+  direct GPU run.
+- **Affects decision rules?** No locked rule changes. acc_norm is a declared
+  secondary metric; substring remains the preregistered primary on record.
